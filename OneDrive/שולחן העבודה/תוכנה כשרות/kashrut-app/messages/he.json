@@ -1,0 +1,233 @@
+{
+  "nav": {
+    "dashboard": "דשבורד",
+    "clients": "לקוחות",
+    "sites": "מפעלים/עסקים",
+    "products": "מוצרים",
+    "projects": "פרויקטים",
+    "mashgichim": "משגיחים",
+    "scheduling": "שיבוץ",
+    "reports": "דיווחים",
+    "holograms": "הולוגרמות",
+    "certificates": "תעודות",
+    "finance": "כספים",
+    "alerts": "התראות",
+    "settings": "הגדרות",
+    "dealers": "דילרים",
+    "myAssignments": "הפרויקטים שלי"
+  },
+  "common": {
+    "save": "שמור",
+    "cancel": "ביטול",
+    "delete": "מחק",
+    "edit": "ערוך",
+    "add": "הוסף",
+    "search": "חיפוש",
+    "filter": "סינון",
+    "export": "ייצוא",
+    "import": "ייבוא",
+    "loading": "טוען...",
+    "noResults": "אין תוצאות",
+    "confirm": "אישור",
+    "close": "סגור",
+    "next": "הבא",
+    "back": "חזור",
+    "send": "שלח",
+    "print": "הדפס",
+    "download": "הורד",
+    "view": "צפה",
+    "active": "פעיל",
+    "inactive": "לא פעיל",
+    "yes": "כן",
+    "no": "לא",
+    "all": "הכל",
+    "status": "סטטוס",
+    "date": "תאריך",
+    "name": "שם",
+    "phone": "טלפון",
+    "email": "מייל",
+    "address": "כתובת",
+    "notes": "הערות",
+    "actions": "פעולות",
+    "total": "סה\"כ",
+    "required": "שדה חובה"
+  },
+  "dashboard": {
+    "title": "דשבורד",
+    "activeProjects": "פרויקטים פעילים",
+    "mashgichimOnField": "משגיחים בשטח היום",
+    "expiringCertificates": "תעודות פוקעות החודש",
+    "openDebts": "חובות פתוחים",
+    "urgentActions": "דורש טיפול מיידי",
+    "weeklyActions": "דורש טיפול השבוע",
+    "todaySchedule": "שיבוצים היום",
+    "recentActivity": "פעילות אחרונה",
+    "quickActions": "גישה מהירה",
+    "newProject": "פרויקט חדש",
+    "newAssignment": "שיבוץ חדש",
+    "newClient": "לקוח חדש",
+    "newInvoice": "חשבונית חדשה"
+  },
+  "clients": {
+    "title": "לקוחות",
+    "new": "לקוח חדש",
+    "type": "סוג לקוח",
+    "importer": "יבואן",
+    "business": "בית עסק",
+    "both": "יבואן + בית עסק",
+    "certRelease": "שחרור תעודות",
+    "releaseImmediate": "שחרור מיידי",
+    "releaseAfterPayment": "ממתין לתשלום",
+    "billingModel": "מודל חיוב",
+    "directInvoice": "חשבונית ישירה",
+    "requiresQuote": "מחייב הצעת מחיר"
+  },
+  "sites": {
+    "title": "מפעלים/עסקים",
+    "new": "מפעל/עסק חדש",
+    "type": "סוג",
+    "factory": "מפעל ייצור",
+    "restaurant": "מסערה",
+    "hotel": "מלון",
+    "bakery": "מאפייה",
+    "warehouse": "מחסן",
+    "other": "אחר",
+    "coordinates": "קואורדינטות GPS",
+    "timezone": "אזור זמן",
+    "reportType": "סוג דוח",
+    "internalReport": "דוח פנימי",
+    "rabbinateReport": "דוח רבנות",
+    "both": "שניהם"
+  },
+  "projects": {
+    "title": "פרויקטים",
+    "new": "פרויקט חדש",
+    "type": "סוג",
+    "annual": "שנתי",
+    "lab": "בדיקת מעבדה",
+    "specific": "ייצור ספציפי",
+    "status": {
+      "pending": "ממתין",
+      "active": "פעיל",
+      "completed": "הושלם",
+      "approved": "מאושר",
+      "certified": "תעודה הונפקה"
+    },
+    "renewalAlert": "תעודה פוקעת בעוד {days} יום",
+    "openRenewal": "פתח פרויקט חידוש",
+    "duplicateWarning": "קיים פרויקט שנתי פעיל עבור לקוח ומפעל אלו",
+    "addToExisting": "הוסף מוצר לפרויקט קיים",
+    "createNew": "פתח פרויקט חדש"
+  },
+  "mashgichim": {
+    "title": "משגיחים",
+    "new": "משגיח חדש",
+    "availability": "זמינות",
+    "available": "זמין",
+    "onField": "בשטח",
+    "onLeave": "בחופשה",
+    "salary": {
+      "model": "מודל שכר",
+      "hourly": "שעתי",
+      "daily": "יומי",
+      "monthly": "חודשי קבוע",
+      "combined": "שילוב",
+      "rate": "תעריף",
+      "expenses": "הוצאות",
+      "noExpenses": "ללא הוצאות",
+      "fixedExpenses": "הוצאות קבועות",
+      "variableExpenses": "הוצאות משתנות",
+      "both": "גם וגם"
+    }
+  },
+  "scheduling": {
+    "title": "שיבוץ",
+    "new": "שיבוץ חדש",
+    "byMashgiach": "לפי משגיח",
+    "bySite": "לפי מפעל",
+    "monthly": "חודשי",
+    "map": "מפה",
+    "conflict": "קונפליקט",
+    "visitTypes": {
+      "annual": "ביקור שנתי",
+      "specific": "ייצור ספציפי",
+      "continuous": "השגחה צמודה",
+      "initial": "ביקור ראשוני"
+    },
+    "status": {
+      "created": "נוצר",
+      "confirmed": "אושר ע\"י מפעל",
+      "departed": "משגיח יצא",
+      "arrived": "הגיע לאתר",
+      "completed": "הסתיים",
+      "reported": "דוח הוגש",
+      "approved": "אושר"
+    },
+    "late": "משגיח לא הגיע — {minutes} דקות איחור"
+  },
+  "certificates": {
+    "title": "תעודות כשרות",
+    "new": "הנפק תעודה",
+    "status": {
+      "issued": "הונפקה",
+      "waitingPayment": "ממתינה לתשלום",
+      "readyToSend": "מוכנה לשחרור",
+      "sent": "נשלחה",
+      "sentManually": "נשלחה ידנית"
+    },
+    "expiresIn": "פוקעת בעוד {days} יום",
+    "expired": "פגת תוקף",
+    "release": "שחרר ושלח",
+    "notSentWarning": "תעודה לא נשלחה ({days} ימים)"
+  },
+  "finance": {
+    "title": "כספים",
+    "invoices": "חשבוניות",
+    "quotes": "הצעות מחיר",
+    "salary": "שכר משגיחים",
+    "debts": "חובות",
+    "status": {
+      "paid": "שולם",
+      "pending": "ממתין",
+      "overdue": "פגר",
+      "partial": "שולם חלקית"
+    },
+    "dealerBilling": {
+      "fixed": "מחיר מוחלט",
+      "expenses": "דוח הוצאות ושכר"
+    }
+  },
+  "holograms": {
+    "title": "הולוגרמות",
+    "inventory": "מלאי",
+    "allocated": "הוקצו",
+    "available": "זמינות",
+    "range": "טווח",
+    "used": "נוצלו",
+    "remaining": "נותרו"
+  },
+  "alerts": {
+    "title": "התראות",
+    "urgent": "דחוף",
+    "important": "חשוב",
+    "info": "לידיעה",
+    "dismiss": "סגור",
+    "snooze": "דחה ל-{days} ימים",
+    "markDone": "טופל"
+  },
+  "settings": {
+    "title": "הגדרות",
+    "organization": "פרטי ארגון",
+    "certBodies": "גופי כשרות",
+    "levels": "רמות משגיחים",
+    "requirements": "דרישות כשרות",
+    "templates": "תבניות מסמכים",
+    "users": "משתמשים והרשאות",
+    "integrations": "אינטגרציות"
+  },
+  "activity": {
+    "title": "היסטוריה",
+    "addNote": "הוסף הערה",
+    "by": "ע\"י"
+  }
+}

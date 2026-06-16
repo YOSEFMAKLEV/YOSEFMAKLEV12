@@ -1,0 +1,839 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Multi-tenancy ────────────────────────────────────────────────────────────
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  nameEn    String?
+  logo      String?
+  address   String?
+  phone     String?
+  email     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users        User[]
+  clients      Client[]
+  sites        Site[]
+  products     Product[]
+  mashgichim   Mashgiach[]
+  certBodies   CertBody[]
+  dealers      Dealer[]
+  projects     Project[]
+  assignments  Assignment[]
+  certificates Certificate[]
+  invoices     Invoice[]
+  quotes       Quote[]
+  holograms    HologramBatch[]
+  alerts       Alert[]
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  name         String
+  email        String @unique
+  passwordHash String?
+  role         Role
+
+  // Fine-grained permissions for office staff
+  canManageClients      Boolean @default(false)
+  canManageFinance      Boolean @default(false)
+  canManageCertificates Boolean @default(false)
+  canManageSalary       Boolean @default(false)
+  canManageScheduling   Boolean @default(false)
+  canManageHolograms    Boolean @default(false)
+  canViewReports        Boolean @default(false)
+  canManageSettings     Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accounts     Account[]
+  sessions     Session[]
+  activityLogs ActivityLog[]
+  mashgiach    Mashgiach?
+}
+
+enum Role {
+  ADMIN
+  OFFICE_STAFF
+  MASHGIACH
+  RABBI
+  IMPORTER_PORTAL
+  BUSINESS_PORTAL
+}
+
+// ─── Clients ──────────────────────────────────────────────────────────────────
+
+model Client {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  name        String
+  nameEn      String?
+  type        ClientType
+  vatNumber   String?
+  contactName String?
+  phone       String?
+  email       String?
+  address     String?
+
+  certRelease   CertRelease @default(IMMEDIATE)
+  requiresQuote Boolean     @default(false)
+
+  portalToken String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sites        Site[]
+  projects     Project[]
+  certificates Certificate[]
+  invoices     Invoice[]
+  quotes       Quote[]
+  activityLogs ActivityLog[]
+}
+
+enum ClientType {
+  IMPORTER
+  BUSINESS
+  BOTH
+}
+
+enum CertRelease {
+  IMMEDIATE
+  AFTER_PAYMENT
+}
+
+// ─── Sites (מפעלים/עסקים) ────────────────────────────────────────────────────
+
+model Site {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  clientId       String
+  client         Client       @relation(fields: [clientId], references: [id])
+
+  name     String
+  nameEn   String?
+  type     SiteType
+  address  String?
+  country  String
+  timezone String
+
+  latitude  Float?
+  longitude Float?
+
+  contactName String?
+  phone       String?
+  email       String?
+  language    String?
+
+  internalReport    Boolean @default(true)
+  rabbinateReport   Boolean @default(false)
+  rabbinateTemplate String?
+
+  accessToken String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products         Product[]
+  productionPoints ProductionPoint[]
+  projects         Project[]
+  assignments      Assignment[]
+  activityLogs     ActivityLog[]
+}
+
+enum SiteType {
+  FACTORY
+  RESTAURANT
+  HOTEL
+  BAKERY
+  WAREHOUSE
+  OTHER
+}
+
+model ProductionPoint {
+  id     String @id @default(cuid())
+  siteId String
+  site   Site   @relation(fields: [siteId], references: [id])
+
+  name      String
+  latitude  Float?
+  longitude Float?
+  notes     String?
+
+  createdAt DateTime @default(now())
+
+  mashgichim ProductionPointMashgiach[]
+}
+
+model ProductionPointMashgiach {
+  productionPointId String
+  productionPoint   ProductionPoint @relation(fields: [productionPointId], references: [id])
+  mashgiachId       String
+  mashgiach         Mashgiach       @relation(fields: [mashgiachId], references: [id])
+
+  @@id([productionPointId, mashgiachId])
+}
+
+// ─── Products ─────────────────────────────────────────────────────────────────
+
+model Product {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  siteId         String
+  site           Site         @relation(fields: [siteId], references: [id])
+  clientId       String
+
+  name     String
+  nameEn   String?
+  category String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  certBodyProducts CertBodyProduct[]
+  rawMaterials     RawMaterial[]
+  labelApprovals   LabelApproval[]
+  projectProducts  ProjectProduct[]
+}
+
+// ─── Certifying Bodies ────────────────────────────────────────────────────────
+
+model CertBody {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  name         String
+  nameEn       String?
+  logo         String?
+  country      String?
+  contactName  String?
+  contactEmail String?
+  isActive     Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  certBodyProducts    CertBodyProduct[]
+  mashgiachCertBodies MashgiachCertBody[]
+  projects            Project[]
+  certificates        Certificate[]
+}
+
+model CertBodyProduct {
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  certBodyId String
+  certBody   CertBody @relation(fields: [certBodyId], references: [id])
+
+  requirements String[]
+
+  @@id([productId, certBodyId])
+}
+
+// ─── Raw Materials & Labels ───────────────────────────────────────────────────
+
+model RawMaterial {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  name            String
+  supplier        String?
+  country         String?
+  certBodyId      String?
+  status          RawMaterialStatus @default(PENDING)
+  certificateFile String?
+
+  approvedBy     String?
+  approvedAt     DateTime?
+  rejectedReason String?
+  expiresAt      DateTime?
+  notes          String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum RawMaterialStatus {
+  PENDING
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  EXPIRED
+  NEEDS_INFO
+}
+
+model LabelApproval {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  version    Int            @default(1)
+  fileUrl    String?
+  notes      String?
+  status     ApprovalStatus @default(PENDING)
+  approvedBy String?
+  approvedAt DateTime?
+
+  createdAt DateTime @default(now())
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  NEEDS_CHANGES
+}
+
+// ─── Mashgichim ───────────────────────────────────────────────────────────────
+
+model Mashgiach {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  name          String
+  nameEn        String?
+  phone         String?
+  email         String?
+  city          String?
+  passportPhoto String?
+  citizenships  String[]
+  languages     Json?
+  activeRegions String[]
+
+  salaryModel   SalaryModel?
+  salaryRate    Float?
+  expensesType  ExpensesType?
+  fixedExpenses Float?
+  notes         String?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  certBodies       MashgiachCertBody[]
+  levels           MashgiachLevel[]
+  assignments      Assignment[]
+  productionPoints ProductionPointMashgiach[]
+  payrollEntries   PayrollEntry[]
+
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id])
+}
+
+enum SalaryModel {
+  HOURLY
+  DAILY
+  MONTHLY
+  COMBINED
+}
+
+enum ExpensesType {
+  NONE
+  FIXED
+  VARIABLE
+  BOTH
+}
+
+model MashgiachCertBody {
+  mashgiachId String
+  mashgiach   Mashgiach @relation(fields: [mashgiachId], references: [id])
+  certBodyId  String
+  certBody    CertBody  @relation(fields: [certBodyId], references: [id])
+
+  @@id([mashgiachId, certBodyId])
+}
+
+model SupervisionLevel {
+  id             String @id @default(cuid())
+  organizationId String
+
+  name     String
+  nameEn   String?
+  color    String?
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  mashgichim MashgiachLevel[]
+}
+
+model MashgiachLevel {
+  mashgiachId String
+  mashgiach   Mashgiach        @relation(fields: [mashgiachId], references: [id])
+  levelId     String
+  level       SupervisionLevel @relation(fields: [levelId], references: [id])
+
+  @@id([mashgiachId, levelId])
+}
+
+// ─── Dealers ──────────────────────────────────────────────────────────────────
+
+model Dealer {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  name        String
+  contactName String?
+  phone       String?
+  email       String?
+  notes       String?
+  isActive    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects Project[]
+}
+
+// ─── Projects ─────────────────────────────────────────────────────────────────
+
+model Project {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  clientId       String
+  client         Client       @relation(fields: [clientId], references: [id])
+  siteId         String
+  site           Site         @relation(fields: [siteId], references: [id])
+  certBodyId     String?
+  certBody       CertBody?    @relation(fields: [certBodyId], references: [id])
+  dealerId       String?
+  dealer         Dealer?      @relation(fields: [dealerId], references: [id])
+
+  type               ProjectType
+  status             ProjectStatus      @default(PENDING)
+  dealerBillingModel DealerBillingModel?
+
+  openedAt       DateTime  @default(now())
+  plannedVisitAt DateTime?
+  actualVisitAt  DateTime?
+  completedAt    DateTime?
+  notes          String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products     ProjectProduct[]
+  assignments  Assignment[]
+  certificates Certificate[]
+  invoices     Invoice[]
+  quotes       Quote[]
+  activityLogs ActivityLog[]
+}
+
+enum ProjectType {
+  ANNUAL
+  LAB
+  SPECIFIC
+}
+
+enum ProjectStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  APPROVED
+  CERTIFIED
+}
+
+enum DealerBillingModel {
+  FIXED_PRICE
+  EXPENSE_REPORT
+}
+
+model ProjectProduct {
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@id([projectId, productId])
+}
+
+// ─── Assignments (שיבוץ) ──────────────────────────────────────────────────────
+
+model Assignment {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  projectId      String
+  project        Project      @relation(fields: [projectId], references: [id])
+  siteId         String
+  site           Site         @relation(fields: [siteId], references: [id])
+  mashgiachId    String
+  mashgiach      Mashgiach    @relation(fields: [mashgiachId], references: [id])
+
+  type   VisitType
+  status AssignmentStatus @default(CREATED)
+
+  scheduledAt  DateTime
+  scheduledEnd DateTime?
+  actualStart  DateTime?
+  actualEnd    DateTime?
+
+  startLatitude  Float?
+  startLongitude Float?
+  endLatitude    Float?
+  endLongitude   Float?
+
+  siteArrangesTravel Boolean @default(false)
+  travelDetails      String?
+  instructions       String?
+
+  siteConfirmedAt  DateTime?
+  siteConfirmToken String?   @unique
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reports      AssignmentReport[]
+  activityLogs ActivityLog[]
+}
+
+enum VisitType {
+  ANNUAL
+  SPECIFIC
+  CONTINUOUS
+  INITIAL
+}
+
+enum AssignmentStatus {
+  CREATED
+  SITE_CONFIRMED
+  DEPARTED
+  ARRIVED
+  COMPLETED
+  REPORTED
+  APPROVED
+}
+
+model AssignmentReport {
+  id           String     @id @default(cuid())
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id])
+
+  checkIn  DateTime?
+  checkOut DateTime?
+
+  internalNotes  String?
+  rabbinateNotes String?
+  findings       String?
+  issues         String?
+
+  hologramFrom Int?
+  hologramTo   Int?
+
+  signature String?
+  status    ReportStatus @default(DRAFT)
+
+  copiedFromId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum ReportStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+// ─── Holograms ────────────────────────────────────────────────────────────────
+
+model HologramBatch {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  rangeFrom  Int
+  rangeTo    Int
+  receivedAt DateTime @default(now())
+  notes      String?
+
+  allocations HologramAllocation[]
+}
+
+model HologramAllocation {
+  id        String        @id @default(cuid())
+  batchId   String
+  batch     HologramBatch @relation(fields: [batchId], references: [id])
+  projectId String
+
+  rangeFrom   Int
+  rangeTo     Int
+  allocatedAt DateTime @default(now())
+
+  usages HologramUsage[]
+}
+
+model HologramUsage {
+  id           String             @id @default(cuid())
+  allocationId String
+  allocation   HologramAllocation @relation(fields: [allocationId], references: [id])
+
+  rangeFrom Int
+  rangeTo   Int
+  usedAt    DateTime @default(now())
+  reportId  String?
+}
+
+// ─── Certificates ─────────────────────────────────────────────────────────────
+
+model Certificate {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  projectId      String
+  project        Project      @relation(fields: [projectId], references: [id])
+  clientId       String
+  client         Client       @relation(fields: [clientId], references: [id])
+  certBodyId     String?
+  certBody       CertBody?    @relation(fields: [certBodyId], references: [id])
+
+  issuedAt  DateTime @default(now())
+  expiresAt DateTime
+
+  status CertificateStatus @default(ISSUED)
+
+  pdfUrl  String?
+  wordUrl String?
+
+  sentAt   DateTime?
+  sentVia  String?
+  sentTo   String?
+
+  renewalAlertSent Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum CertificateStatus {
+  ISSUED
+  WAITING_PAYMENT
+  READY_TO_SEND
+  SENT
+  SENT_MANUALLY
+}
+
+// ─── Finance ──────────────────────────────────────────────────────────────────
+
+model Quote {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  clientId       String
+  client         Client   @relation(fields: [clientId], references: [id])
+  projectId      String?
+  project        Project? @relation(fields: [projectId], references: [id])
+
+  items      Json
+  total      Float
+  status     QuoteStatus @default(PENDING)
+  validUntil DateTime?
+  terms      String?
+
+  approvedAt     DateTime?
+  approvedByName String?
+  approvalToken  String?   @unique
+
+  invoiceId String?
+
+  sentAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum QuoteStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CONVERTED
+  EXPIRED
+}
+
+model Invoice {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  clientId       String
+  client         Client   @relation(fields: [clientId], references: [id])
+  projectId      String?
+  project        Project? @relation(fields: [projectId], references: [id])
+
+  number     String
+  items      Json
+  total      Float
+  status     InvoiceStatus @default(PENDING)
+  dueDate    DateTime?
+  paidAt     DateTime?
+  paidAmount Float?
+
+  sentAt  DateTime?
+  sentVia String?
+
+  releaseCertOnPayment Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+  PARTIAL
+}
+
+model PayrollEntry {
+  id          String    @id @default(cuid())
+  mashgiachId String
+  mashgiach   Mashgiach @relation(fields: [mashgiachId], references: [id])
+
+  month       Int
+  year        Int
+  hoursWorked Float?
+  baseAmount  Float
+  expenses    Float         @default(0)
+  total       Float
+  status      PayrollStatus @default(PENDING)
+  paidAt      DateTime?
+  notes       String?
+
+  createdAt DateTime @default(now())
+}
+
+enum PayrollStatus {
+  PENDING
+  APPROVED
+  PAID
+}
+
+// ─── Activity Log ─────────────────────────────────────────────────────────────
+
+model ActivityLog {
+  id             String @id @default(cuid())
+  organizationId String
+
+  entityType  String
+  entityId    String
+  action      String
+  description String
+  metadata    Json?
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  clientId     String?
+  client       Client?     @relation(fields: [clientId], references: [id])
+  projectId    String?
+  project      Project?    @relation(fields: [projectId], references: [id])
+  siteId       String?
+  site         Site?       @relation(fields: [siteId], references: [id])
+  assignmentId String?
+  assignment   Assignment? @relation(fields: [assignmentId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+// ─── Alerts ───────────────────────────────────────────────────────────────────
+
+model Alert {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  type        AlertType
+  severity    AlertSeverity
+  title       String
+  description String?
+  entityType  String?
+  entityId    String?
+
+  isRead       Boolean   @default(false)
+  isDismissed  Boolean   @default(false)
+  snoozedUntil DateTime?
+
+  createdAt DateTime @default(now())
+}
+
+enum AlertType {
+  CERT_EXPIRING
+  CERT_NOT_SENT
+  MASHGIACH_LATE
+  REPORT_NOT_SUBMITTED
+  PAYMENT_OVERDUE
+  QUOTE_EXPIRING
+  HOLOGRAM_LOW
+  RAW_MATERIAL_EXPIRED
+}
+
+enum AlertSeverity {
+  URGENT
+  IMPORTANT
+  INFO
+}
+
+// ─── NextAuth ─────────────────────────────────────────────────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}

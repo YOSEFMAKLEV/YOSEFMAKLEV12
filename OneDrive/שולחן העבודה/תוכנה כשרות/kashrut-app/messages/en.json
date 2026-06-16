@@ -1,0 +1,233 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "clients": "Clients",
+    "sites": "Sites",
+    "products": "Products",
+    "projects": "Projects",
+    "mashgichim": "Supervisors",
+    "scheduling": "Scheduling",
+    "reports": "Reports",
+    "holograms": "Holograms",
+    "certificates": "Certificates",
+    "finance": "Finance",
+    "alerts": "Alerts",
+    "settings": "Settings",
+    "dealers": "Dealers",
+    "myAssignments": "My Assignments"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "import": "Import",
+    "loading": "Loading...",
+    "noResults": "No results",
+    "confirm": "Confirm",
+    "close": "Close",
+    "next": "Next",
+    "back": "Back",
+    "send": "Send",
+    "print": "Print",
+    "download": "Download",
+    "view": "View",
+    "active": "Active",
+    "inactive": "Inactive",
+    "yes": "Yes",
+    "no": "No",
+    "all": "All",
+    "status": "Status",
+    "date": "Date",
+    "name": "Name",
+    "phone": "Phone",
+    "email": "Email",
+    "address": "Address",
+    "notes": "Notes",
+    "actions": "Actions",
+    "total": "Total",
+    "required": "Required field"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "activeProjects": "Active Projects",
+    "mashgichimOnField": "Supervisors On Field Today",
+    "expiringCertificates": "Certificates Expiring This Month",
+    "openDebts": "Open Debts",
+    "urgentActions": "Requires Immediate Attention",
+    "weeklyActions": "Requires Attention This Week",
+    "todaySchedule": "Today's Schedule",
+    "recentActivity": "Recent Activity",
+    "quickActions": "Quick Actions",
+    "newProject": "New Project",
+    "newAssignment": "New Assignment",
+    "newClient": "New Client",
+    "newInvoice": "New Invoice"
+  },
+  "clients": {
+    "title": "Clients",
+    "new": "New Client",
+    "type": "Client Type",
+    "importer": "Importer",
+    "business": "Business",
+    "both": "Importer + Business",
+    "certRelease": "Certificate Release",
+    "releaseImmediate": "Immediate Release",
+    "releaseAfterPayment": "Hold Until Payment",
+    "billingModel": "Billing Model",
+    "directInvoice": "Direct Invoice",
+    "requiresQuote": "Requires Quote First"
+  },
+  "sites": {
+    "title": "Sites",
+    "new": "New Site",
+    "type": "Type",
+    "factory": "Production Factory",
+    "restaurant": "Restaurant",
+    "hotel": "Hotel",
+    "bakery": "Bakery",
+    "warehouse": "Warehouse",
+    "other": "Other",
+    "coordinates": "GPS Coordinates",
+    "timezone": "Timezone",
+    "reportType": "Report Type",
+    "internalReport": "Internal Report",
+    "rabbinateReport": "Rabbinate Report",
+    "both": "Both"
+  },
+  "projects": {
+    "title": "Projects",
+    "new": "New Project",
+    "type": "Type",
+    "annual": "Annual",
+    "lab": "Lab Test",
+    "specific": "Specific Production",
+    "status": {
+      "pending": "Pending",
+      "active": "Active",
+      "completed": "Completed",
+      "approved": "Approved",
+      "certified": "Certificate Issued"
+    },
+    "renewalAlert": "Certificate expires in {days} days",
+    "openRenewal": "Open Renewal Project",
+    "duplicateWarning": "An active annual project already exists for this client and site",
+    "addToExisting": "Add product to existing project",
+    "createNew": "Create new project"
+  },
+  "mashgichim": {
+    "title": "Supervisors",
+    "new": "New Supervisor",
+    "availability": "Availability",
+    "available": "Available",
+    "onField": "On Field",
+    "onLeave": "On Leave",
+    "salary": {
+      "model": "Salary Model",
+      "hourly": "Hourly",
+      "daily": "Daily",
+      "monthly": "Monthly Fixed",
+      "combined": "Combined",
+      "rate": "Rate",
+      "expenses": "Expenses",
+      "noExpenses": "No Expenses",
+      "fixedExpenses": "Fixed Expenses",
+      "variableExpenses": "Variable Expenses",
+      "both": "Both"
+    }
+  },
+  "scheduling": {
+    "title": "Scheduling",
+    "new": "New Assignment",
+    "byMashgiach": "By Supervisor",
+    "bySite": "By Site",
+    "monthly": "Monthly",
+    "map": "Map",
+    "conflict": "Conflict",
+    "visitTypes": {
+      "annual": "Annual Visit",
+      "specific": "Specific Production",
+      "continuous": "Continuous Supervision",
+      "initial": "Initial Visit"
+    },
+    "status": {
+      "created": "Created",
+      "confirmed": "Confirmed by Site",
+      "departed": "Supervisor Departed",
+      "arrived": "Arrived at Site",
+      "completed": "Completed",
+      "reported": "Report Submitted",
+      "approved": "Approved"
+    },
+    "late": "Supervisor has not arrived — {minutes} minutes late"
+  },
+  "certificates": {
+    "title": "Kosher Certificates",
+    "new": "Issue Certificate",
+    "status": {
+      "issued": "Issued",
+      "waitingPayment": "Waiting for Payment",
+      "readyToSend": "Ready to Send",
+      "sent": "Sent",
+      "sentManually": "Sent Manually"
+    },
+    "expiresIn": "Expires in {days} days",
+    "expired": "Expired",
+    "release": "Release & Send",
+    "notSentWarning": "Certificate not sent ({days} days)"
+  },
+  "finance": {
+    "title": "Finance",
+    "invoices": "Invoices",
+    "quotes": "Quotes",
+    "salary": "Supervisor Salary",
+    "debts": "Debts",
+    "status": {
+      "paid": "Paid",
+      "pending": "Pending",
+      "overdue": "Overdue",
+      "partial": "Partially Paid"
+    },
+    "dealerBilling": {
+      "fixed": "Fixed Price",
+      "expenses": "Expense & Salary Report"
+    }
+  },
+  "holograms": {
+    "title": "Holograms",
+    "inventory": "Inventory",
+    "allocated": "Allocated",
+    "available": "Available",
+    "range": "Range",
+    "used": "Used",
+    "remaining": "Remaining"
+  },
+  "alerts": {
+    "title": "Alerts",
+    "urgent": "Urgent",
+    "important": "Important",
+    "info": "Info",
+    "dismiss": "Dismiss",
+    "snooze": "Snooze for {days} days",
+    "markDone": "Mark as Done"
+  },
+  "settings": {
+    "title": "Settings",
+    "organization": "Organization Details",
+    "certBodies": "Certifying Bodies",
+    "levels": "Supervisor Levels",
+    "requirements": "Kashrut Requirements",
+    "templates": "Document Templates",
+    "users": "Users & Permissions",
+    "integrations": "Integrations"
+  },
+  "activity": {
+    "title": "History",
+    "addNote": "Add Note",
+    "by": "by"
+  }
+}
