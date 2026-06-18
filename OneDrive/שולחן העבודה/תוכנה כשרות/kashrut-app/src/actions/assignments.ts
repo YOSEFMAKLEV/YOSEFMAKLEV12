@@ -4,10 +4,16 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { VisitType } from "@/generated/prisma/client";
 
-export async function getAssignments(organizationId: string, from?: Date, to?: Date) {
+export async function getAssignments(
+  organizationId: string,
+  from?: Date,
+  to?: Date,
+  mashgiachId?: string
+) {
   return prisma.assignment.findMany({
     where: {
       organizationId,
+      ...(mashgiachId ? { mashgiachId } : {}),
       ...(from && to ? { scheduledAt: { gte: from, lte: to } } : {}),
     },
     include: {
@@ -31,8 +37,17 @@ export async function createAssignment(data: {
   siteArrangesTravel?: boolean;
   travelDetails?: string;
   createdByUserId?: string;
+  forceOverride?: boolean;
 }) {
-  const { createdByUserId, ...rest } = data;
+  const { createdByUserId, forceOverride, ...rest } = data;
+
+  // Duplicate check — same mashgiach already assigned to this project
+  const duplicate = await prisma.assignment.findFirst({
+    where: { projectId: data.projectId, mashgiachId: data.mashgiachId },
+  });
+  if (duplicate) {
+    throw new Error("DUPLICATE:משגיח זה כבר משובץ לפרויקט זה");
+  }
 
   // Conflict check — same mashgiach, overlapping time
   const end = data.scheduledEnd ?? data.scheduledAt;
@@ -47,8 +62,8 @@ export async function createAssignment(data: {
     include: { site: { select: { name: true } } },
   });
 
-  if (conflict) {
-    throw new Error(`קונפליקט: המשגיח כבר משובץ ב-${conflict.site.name} בתאריך זה`);
+  if (conflict && !forceOverride) {
+    throw new Error(`CONFLICT:המשגיח כבר משובץ ב-${conflict.site.name} בתאריך זה`);
   }
 
   const assignment = await prisma.assignment.create({ data: rest });
@@ -65,7 +80,56 @@ export async function createAssignment(data: {
   });
 
   revalidatePath("/scheduling");
+  revalidatePath("/projects");
   return assignment;
+}
+
+export async function updateAssignment(
+  id: string,
+  data: {
+    mashgiachId?: string;
+    scheduledAt?: Date;
+    scheduledEnd?: Date;
+    forceOverride?: boolean;
+  }
+) {
+  const { forceOverride, ...updateData } = data;
+
+  if (!forceOverride) {
+    const existing = await prisma.assignment.findUnique({ where: { id } });
+    if (!existing) throw new Error("שיבוץ לא נמצא");
+
+    const mashgiachId = data.mashgiachId ?? existing.mashgiachId;
+    const scheduledAt = data.scheduledAt ?? existing.scheduledAt;
+    const scheduledEnd = data.scheduledEnd ?? existing.scheduledEnd ?? scheduledAt;
+
+    const conflict = await prisma.assignment.findFirst({
+      where: {
+        id: { not: id },
+        mashgiachId,
+        OR: [
+          { scheduledAt: { lte: scheduledEnd }, scheduledEnd: { gte: scheduledAt } },
+          { scheduledAt: { gte: scheduledAt, lte: scheduledEnd } },
+        ],
+      },
+      include: { site: { select: { name: true } } },
+    });
+
+    if (conflict) {
+      throw new Error(`CONFLICT:המשגיח כבר משובץ ב-${conflict.site.name} בתאריך זה`);
+    }
+  }
+
+  const updated = await prisma.assignment.update({ where: { id }, data: updateData });
+  revalidatePath("/scheduling");
+  revalidatePath("/projects");
+  return updated;
+}
+
+export async function deleteAssignment(id: string) {
+  await prisma.assignment.delete({ where: { id } });
+  revalidatePath("/scheduling");
+  revalidatePath("/projects");
 }
 
 export async function updateAssignmentStatus(

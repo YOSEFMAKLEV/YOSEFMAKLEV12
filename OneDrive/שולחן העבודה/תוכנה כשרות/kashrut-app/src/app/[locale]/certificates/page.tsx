@@ -23,6 +23,15 @@ function formatDate(d: Date) {
   return new Intl.DateTimeFormat("he-IL").format(new Date(d));
 }
 
+function countryName(code: string | null | undefined): string {
+  if (!code) return "—";
+  try {
+    return new Intl.DisplayNames(["he"], { type: "region" }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+}
+
 function daysUntil(d: Date) {
   return Math.ceil((new Date(d).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 }
@@ -78,6 +87,7 @@ export default async function CertificatesPage() {
             <tr>
               <th className="text-start px-4 py-3 font-medium text-gray-600">לקוח</th>
               <th className="text-start px-4 py-3 font-medium text-gray-600">אתר</th>
+              <th className="text-start px-4 py-3 font-medium text-gray-600">מדינה</th>
               <th className="text-start px-4 py-3 font-medium text-gray-600">גוף כשרות</th>
               <th className="text-start px-4 py-3 font-medium text-gray-600">הונפקה</th>
               <th className="text-start px-4 py-3 font-medium text-gray-600">תוקף עד</th>
@@ -88,7 +98,7 @@ export default async function CertificatesPage() {
           <tbody className="divide-y divide-gray-100">
             {certs.length === 0 && (
               <tr>
-                <td colSpan={7} className="text-center py-12 text-gray-400">
+                <td colSpan={8} className="text-center py-12 text-gray-400">
                   אין תעודות — <Link href="/certificates/new" className="text-blue-600 hover:underline">הנפק את הראשונה</Link>
                 </td>
               </tr>
@@ -105,6 +115,7 @@ export default async function CertificatesPage() {
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-gray-600">{cert.project.site.name}</td>
+                  <td className="px-4 py-3 text-gray-500 text-xs">{countryName(cert.project.site.country)}</td>
                   <td className="px-4 py-3 text-gray-500 text-xs">{cert.certBody?.name ?? "—"}</td>
                   <td className="px-4 py-3 text-gray-600 text-xs">{formatDate(cert.issuedAt)}</td>
                   <td className="px-4 py-3">

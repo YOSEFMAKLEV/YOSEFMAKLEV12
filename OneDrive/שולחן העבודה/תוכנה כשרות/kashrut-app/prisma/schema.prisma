@@ -5,6 +5,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // ─── Multi-tenancy ────────────────────────────────────────────────────────────
@@ -20,20 +21,24 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users        User[]
-  clients      Client[]
-  sites        Site[]
-  products     Product[]
-  mashgichim   Mashgiach[]
-  certBodies   CertBody[]
-  dealers      Dealer[]
-  projects     Project[]
-  assignments  Assignment[]
-  certificates Certificate[]
-  invoices     Invoice[]
-  quotes       Quote[]
-  holograms    HologramBatch[]
-  alerts       Alert[]
+  users               User[]
+  clients             Client[]
+  sites               Site[]
+  products            Product[]
+  mashgichim          Mashgiach[]
+  certBodies          CertBody[]
+  dealers             Dealer[]
+  projects            Project[]
+  assignments         Assignment[]
+  certificates        Certificate[]
+  invoices            Invoice[]
+  quotes              Quote[]
+  holograms           HologramBatch[]
+  hologramTransfers   HologramTransfer[]
+  alerts              Alert[]
+  checklistTemplates  ProjectChecklistTemplate[]
+  profileEditRequests ProfileEditRequest[]
+  officeMessages      OfficeMessage[]
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -95,6 +100,20 @@ model Client {
   certRelease   CertRelease @default(IMMEDIATE)
   requiresQuote Boolean     @default(false)
 
+  defaultDealerId String?
+  defaultDealer   Dealer?  @relation("ClientDefaultDealer", fields: [defaultDealerId], references: [id])
+
+  // ── Billing settings ──────────────────────────────────────────────────────
+  billingSource          BillingSource     @default(IMPORTER)
+  agentCommissionDealerId String?
+  agentCommissionType    CommissionType    @default(NONE)
+  agentCommissionValue   Float?
+
+  annualFee         Float?
+  annualFeeCurrency Currency @default(ILS)
+
+  billingNotes String?
+
   portalToken String? @unique
 
   createdAt DateTime @default(now())
@@ -106,6 +125,44 @@ model Client {
   invoices     Invoice[]
   quotes       Quote[]
   activityLogs ActivityLog[]
+  priceItems   ClientPriceItem[]
+}
+
+enum BillingSource {
+  IMPORTER
+  AGENT
+  FACTORY
+}
+
+enum CommissionType {
+  NONE
+  PERCENTAGE
+  FIXED
+}
+
+enum Currency {
+  ILS
+  USD
+  EUR
+  GBP
+}
+
+model ClientPriceItem {
+  id       String @id @default(cuid())
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  name      String
+  unitLabel String?
+  price     Float
+  currency  Currency @default(USD)
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectLineItems ProjectLineItem[]
 }
 
 enum ClientType {
@@ -157,6 +214,24 @@ model Site {
   projects         Project[]
   assignments      Assignment[]
   activityLogs     ActivityLog[]
+  productSites     ProductSite[]
+  projectSites     ProjectSite[]
+  contacts         SiteContact[]
+}
+
+model SiteContact {
+  id     String @id @default(cuid())
+  siteId String
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  name      String
+  role      String?
+  phone     String?
+  email     String?
+  isPrimary Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum SiteType {
@@ -213,6 +288,7 @@ model Product {
   rawMaterials     RawMaterial[]
   labelApprovals   LabelApproval[]
   projectProducts  ProjectProduct[]
+  productSites     ProductSite[]
 }
 
 // ─── Certifying Bodies ────────────────────────────────────────────────────────
@@ -232,10 +308,12 @@ model CertBody {
 
   createdAt DateTime @default(now())
 
-  certBodyProducts    CertBodyProduct[]
-  mashgiachCertBodies MashgiachCertBody[]
-  projects            Project[]
-  certificates        Certificate[]
+  certBodyProducts     CertBodyProduct[]
+  mashgiachCertBodies  MashgiachCertBody[]
+  projects             Project[]
+  certificates         Certificate[]
+  hologramBatches      HologramBatch[]
+  rawMaterialApprovals RawMaterialApproval[]
 }
 
 model CertBodyProduct {
@@ -263,6 +341,13 @@ model RawMaterial {
   status          RawMaterialStatus @default(PENDING)
   certificateFile String?
 
+  kosherType          KosherType @default(PAREVE)
+  certificateIssuedBy String?
+
+  imageUrl        String?
+  requiresKosherSymbol Boolean @default(false)
+  factorySpecific      Boolean @default(false)
+
   approvedBy     String?
   approvedAt     DateTime?
   rejectedReason String?
@@ -271,6 +356,32 @@ model RawMaterial {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  approvals RawMaterialApproval[]
+}
+
+model RawMaterialApproval {
+  id            String      @id @default(cuid())
+  rawMaterialId String
+  rawMaterial   RawMaterial @relation(fields: [rawMaterialId], references: [id], onDelete: Cascade)
+  certBodyId    String
+  certBody      CertBody    @relation(fields: [certBodyId], references: [id])
+
+  status     RawMaterialStatus @default(PENDING)
+  approvedBy String?
+  approvedAt DateTime?
+  expiresAt  DateTime?
+  notes      String?
+
+  yearRound            Boolean @default(true)
+  passover             Boolean @default(false)
+  kitniyot             Boolean @default(false)
+  classificationOverride String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([rawMaterialId, certBodyId])
 }
 
 enum RawMaterialStatus {
@@ -280,6 +391,12 @@ enum RawMaterialStatus {
   REJECTED
   EXPIRED
   NEEDS_INFO
+}
+
+enum KosherType {
+  PAREVE
+  DAIRY
+  MEAT
 }
 
 model LabelApproval {
@@ -332,14 +449,38 @@ model Mashgiach {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  certBodies       MashgiachCertBody[]
-  levels           MashgiachLevel[]
-  assignments      Assignment[]
-  productionPoints ProductionPointMashgiach[]
-  payrollEntries   PayrollEntry[]
+  certBodies           MashgiachCertBody[]
+  levels               MashgiachLevel[]
+  assignments          Assignment[]
+  productionPoints     ProductionPointMashgiach[]
+  payrollEntries       PayrollEntry[]
+  hologramTransfersOut HologramTransfer[] @relation("TransferFrom")
+  hologramTransfersIn  HologramTransfer[] @relation("TransferTo")
+  profileEditRequests  ProfileEditRequest[]
+  officeMessages       OfficeMessage[]
 
   userId String? @unique
   user   User?   @relation(fields: [userId], references: [id])
+}
+
+model ProfileEditRequest {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  mashgiachId    String
+  mashgiach      Mashgiach    @relation(fields: [mashgiachId], references: [id])
+
+  requestType String  // "CHANGE" | "ADD"
+  field       String  // "phone" | "email" | "city" | "nameEn"
+  oldValue    String?
+  newValue    String
+  extraData   String? // JSON for complex fields (e.g. language level)
+
+  status     String   @default("PENDING") // "PENDING" | "APPROVED" | "REJECTED"
+  adminNotes String?
+  createdAt  DateTime @default(now())
+  resolvedAt DateTime?
+  resolvedBy String?
 }
 
 enum SalaryModel {
@@ -405,13 +546,15 @@ model Dealer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  projects Project[]
+  projects        Project[]
+  defaultForClients Client[] @relation("ClientDefaultDealer")
 }
 
 // ─── Projects ─────────────────────────────────────────────────────────────────
 
 model Project {
   id             String       @id @default(cuid())
+  projectNumber  Int          @unique @default(autoincrement())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
   clientId       String
@@ -427,21 +570,45 @@ model Project {
   status             ProjectStatus      @default(PENDING)
   dealerBillingModel DealerBillingModel?
 
-  openedAt       DateTime  @default(now())
-  plannedVisitAt DateTime?
-  actualVisitAt  DateTime?
-  completedAt    DateTime?
+  openedAt         DateTime  @default(now())
+  plannedVisitAt   DateTime?
+  plannedVisitEnd  DateTime?
+  actualVisitAt    DateTime?
+  completedAt      DateTime?
   notes          String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  products     ProjectProduct[]
-  assignments  Assignment[]
-  certificates Certificate[]
-  invoices     Invoice[]
-  quotes       Quote[]
-  activityLogs ActivityLog[]
+  products             ProjectProduct[]
+  assignments          Assignment[]
+  certificates         Certificate[]
+  invoices             Invoice[]
+  quotes               Quote[]
+  activityLogs         ActivityLog[]
+  projectSites         ProjectSite[]
+  checklistItems       ProjectChecklistItem[]
+  hologramAllocations  HologramAllocation[]
+  lineItems            ProjectLineItem[]
+}
+
+model ProjectLineItem {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  priceItemId String?
+  priceItem   ClientPriceItem? @relation(fields: [priceItemId], references: [id])
+
+  description String
+  quantity    Float    @default(1)
+  unitPrice   Float
+  currency    Currency @default(USD)
+  notes       String?
+  order       Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum ProjectType {
@@ -470,6 +637,64 @@ model ProjectProduct {
   product   Product @relation(fields: [productId], references: [id])
 
   @@id([projectId, productId])
+}
+
+// Secondary production sites linked to a product (e.g. dairies for a dairy product)
+model ProductSite {
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  siteId    String
+  site      Site    @relation(fields: [siteId], references: [id])
+  notes     String?
+
+  createdAt DateTime @default(now())
+
+  @@id([productId, siteId])
+}
+
+// Sites selected to participate in a specific project (chosen from ProductSite list)
+model ProjectSite {
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id])
+  siteId    String
+  site      Site    @relation(fields: [siteId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@id([projectId, siteId])
+}
+
+// ─── Project Checklist ────────────────────────────────────────────────────────
+
+// Org-level checklist item definitions (configurable in settings)
+model ProjectChecklistTemplate {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  label    String
+  order    Int     @default(0)
+  isActive Boolean @default(true)
+  category String? // e.g. "חלב" — optional filter/grouping tag
+
+  createdAt DateTime @default(now())
+
+  projectItems ProjectChecklistItem[]
+}
+
+// Per-project completion state for each checklist step
+model ProjectChecklistItem {
+  id         String                   @id @default(cuid())
+  projectId  String
+  project    Project                  @relation(fields: [projectId], references: [id])
+  templateId String
+  template   ProjectChecklistTemplate @relation(fields: [templateId], references: [id])
+
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+  completedBy String?
+
+  @@unique([projectId, templateId])
 }
 
 // ─── Assignments (שיבוץ) ──────────────────────────────────────────────────────
@@ -570,12 +795,16 @@ model HologramBatch {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
+  certBodyId String?
+  certBody   CertBody? @relation(fields: [certBodyId], references: [id])
+
   rangeFrom  Int
   rangeTo    Int
   receivedAt DateTime @default(now())
   notes      String?
 
   allocations HologramAllocation[]
+  transfers   HologramTransfer[]
 }
 
 model HologramAllocation {
@@ -583,6 +812,7 @@ model HologramAllocation {
   batchId   String
   batch     HologramBatch @relation(fields: [batchId], references: [id])
   projectId String
+  project   Project       @relation(fields: [projectId], references: [id])
 
   rangeFrom   Int
   rangeTo     Int
@@ -600,6 +830,44 @@ model HologramUsage {
   rangeTo   Int
   usedAt    DateTime @default(now())
   reportId  String?
+}
+
+model HologramTransfer {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  batchId String
+  batch   HologramBatch @relation(fields: [batchId], references: [id])
+
+  rangeFrom Int
+  rangeTo   Int
+
+  fromType       TransferParty
+  fromMashgiachId String?
+  fromMashgiach   Mashgiach?    @relation("TransferFrom", fields: [fromMashgiachId], references: [id])
+
+  toType         TransferParty
+  toMashgiachId  String?
+  toMashgiach    Mashgiach?    @relation("TransferTo", fields: [toMashgiachId], references: [id])
+
+  status      TransferStatus @default(PENDING)
+  notes       String?
+  sentAt      DateTime       @default(now())
+  confirmedAt DateTime?
+  rejectedAt  DateTime?
+}
+
+enum TransferParty {
+  ORG
+  MASHGIACH
+}
+
+enum TransferStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  CANCELLED
 }
 
 // ─── Certificates ─────────────────────────────────────────────────────────────
@@ -783,6 +1051,25 @@ model Alert {
   createdAt DateTime @default(now())
 }
 
+// ─── Office Messages (Mashgiach → Office) ─────────────────────────────────────
+
+model OfficeMessage {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  mashgiachId    String
+  mashgiach      Mashgiach    @relation(fields: [mashgiachId], references: [id])
+
+  body        String
+  attachments Json?    // string[] of relative file paths under /uploads/messages/
+
+  status  String   @default("UNREAD") // UNREAD | READ
+  readAt  DateTime?
+  readBy  String?
+
+  createdAt DateTime @default(now())
+}
+
 enum AlertType {
   CERT_EXPIRING
   CERT_NOT_SENT
@@ -792,6 +1079,8 @@ enum AlertType {
   QUOTE_EXPIRING
   HOLOGRAM_LOW
   RAW_MATERIAL_EXPIRED
+  PROFILE_CHANGE_REQUEST
+  OFFICE_MESSAGE
 }
 
 enum AlertSeverity {

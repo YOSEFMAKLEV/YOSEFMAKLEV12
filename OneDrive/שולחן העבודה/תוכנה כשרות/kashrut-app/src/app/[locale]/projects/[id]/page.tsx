@@ -32,9 +32,14 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            {project.site.name} — {TYPE_LABELS[project.type] ?? project.type}
-          </h1>
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-sm font-bold text-blue-600 bg-blue-50 border border-blue-200 rounded-lg px-2.5 py-1">
+              P-{String(project.projectNumber).padStart(3, "0")}
+            </span>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {project.site.name} — {TYPE_LABELS[project.type] ?? project.type}
+            </h1>
+          </div>
           <p className="text-gray-500 text-sm mt-0.5">{project.client.name} · {project.site.country}</p>
           <div className="flex items-center gap-2 mt-2">
             <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[project.status]}`}>
@@ -63,6 +68,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         type: project.type,
         openedAt: project.openedAt,
         plannedVisitAt: project.plannedVisitAt,
+        plannedVisitEnd: project.plannedVisitEnd,
         actualVisitAt: project.actualVisitAt,
         completedAt: project.completedAt,
         notes: project.notes,
@@ -78,6 +84,14 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         })),
         activityLogs: project.activityLogs.map((l) => ({
           id: l.id, description: l.description, createdAt: l.createdAt, user: l.user,
+        })),
+        priceItems: project.client.priceItems.map((pi) => ({
+          id: pi.id, name: pi.name, unitLabel: pi.unitLabel, price: pi.price, currency: pi.currency,
+        })),
+        lineItems: project.lineItems.map((li) => ({
+          id: li.id, description: li.description, quantity: li.quantity, unitPrice: li.unitPrice,
+          currency: li.currency, notes: li.notes, priceItemId: li.priceItemId,
+          priceItem: li.priceItem,
         })),
       }} />
     </div>

@@ -43,6 +43,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (!valid) return null;
         }
 
+        // Log successful login
+        await prisma.activityLog.create({
+          data: {
+            organizationId: user.organizationId,
+            entityType: "user",
+            entityId: user.id,
+            action: "login",
+            description: `כניסה למערכת — ${user.name} (${user.email})`,
+            userId: user.id,
+          },
+        }).catch(() => {});
+
         return {
           id: user.id,
           name: user.name,

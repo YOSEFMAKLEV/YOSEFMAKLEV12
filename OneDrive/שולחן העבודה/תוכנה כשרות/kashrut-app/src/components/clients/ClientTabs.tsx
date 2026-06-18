@@ -2,12 +2,23 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { setClientDefaultDealer } from "@/actions/dealers";
+import { ClientFinanceTab } from "./ClientFinanceTab";
 
 type Client = {
   id: string;
   name: string;
   nameEn: string | null;
   type: string;
+  defaultDealer: { id: string; name: string } | null;
+  billingSource: string;
+  agentCommissionDealerId: string | null;
+  agentCommissionType: string;
+  agentCommissionValue: number | null;
+  annualFee: number | null;
+  annualFeeCurrency: string;
+  billingNotes: string | null;
+  priceItems: Array<{ id: string; name: string; unitLabel: string | null; price: number; currency: string; order: number }>;
   vatNumber: string | null;
   contactName: string | null;
   phone: string | null;
@@ -30,6 +41,7 @@ type Client = {
     createdAt: Date;
     site: { name: string } | null;
     certBody: { name: string } | null;
+    dealer: { id: string; name: string } | null;
   }>;
   certificates: Array<{
     id: string;
@@ -47,6 +59,8 @@ type Client = {
     createdAt: Date;
   }>;
 };
+
+type Dealer = { id: string; name: string };
 
 const tabs = [
   { id: "details", label: "פרטים" },
@@ -109,8 +123,17 @@ function formatCurrency(n: number) {
   return new Intl.NumberFormat("he-IL", { style: "currency", currency: "ILS" }).format(n);
 }
 
-export function ClientTabs({ client, orgId }: { client: Client; orgId: string }) {
+export function ClientTabs({ client, orgId, dealers }: { client: Client; orgId: string; dealers: Dealer[] }) {
   const [active, setActive] = useState("details");
+  const [defaultDealerId, setDefaultDealerId] = useState(client.defaultDealer?.id ?? "");
+  const [savingDealer, setSavingDealer] = useState(false);
+
+  async function handleDealerChange(dealerId: string) {
+    setSavingDealer(true);
+    setDefaultDealerId(dealerId);
+    await setClientDefaultDealer(client.id, dealerId || null);
+    setSavingDealer(false);
+  }
 
   return (
     <div>
@@ -133,21 +156,49 @@ export function ClientTabs({ client, orgId }: { client: Client; orgId: string })
 
       {/* Details */}
       {active === "details" && (
-        <div className="rounded-xl border bg-white p-6">
-          <div className="grid grid-cols-2 gap-x-8 gap-y-4 text-sm">
-            {[
-              { label: "ח.פ / ע.מ", value: client.vatNumber },
-              { label: "איש קשר", value: client.contactName },
-              { label: "טלפון", value: client.phone },
-              { label: "אימייל", value: client.email },
-              { label: "כתובת", value: client.address },
-              { label: "מצריך הצעת מחיר", value: client.requiresQuote ? "כן" : "לא" },
-            ].map(({ label, value }) => (
-              <div key={label}>
-                <p className="text-gray-400 text-xs mb-0.5">{label}</p>
-                <p className="text-gray-900 font-medium">{value || "—"}</p>
-              </div>
-            ))}
+        <div className="space-y-4">
+          <div className="rounded-xl border bg-white p-6">
+            <div className="grid grid-cols-2 gap-x-8 gap-y-4 text-sm">
+              {[
+                { label: "ח.פ / ע.מ", value: client.vatNumber },
+                { label: "איש קשר", value: client.contactName },
+                { label: "טלפון", value: client.phone },
+                { label: "אימייל", value: client.email },
+                { label: "כתובת", value: client.address },
+                { label: "מצריך הצעת מחיר", value: client.requiresQuote ? "כן" : "לא" },
+              ].map(({ label, value }) => (
+                <div key={label}>
+                  <p className="text-gray-400 text-xs mb-0.5">{label}</p>
+                  <p className="text-gray-900 font-medium">{value || "—"}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Default dealer */}
+          <div className="rounded-xl border bg-white p-6">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">סוכן כשרות ברירת מחדל</h3>
+            <p className="text-xs text-gray-400 mb-3">בפתיחת פרויקט חדש, הסוכן הזה ימולא אוטומטית. ניתן לשנות לכל פרויקט בנפרד.</p>
+            <div className="flex items-center gap-3">
+              <select
+                value={defaultDealerId}
+                onChange={e => handleDealerChange(e.target.value)}
+                disabled={savingDealer}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1"
+              >
+                <option value="">— פרויקט ישיר (ללא סוכן) —</option>
+                {dealers.map(d => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+              </select>
+              {savingDealer && <span className="text-xs text-gray-400">שומר...</span>}
+              {!savingDealer && defaultDealerId && (
+                <span className="rounded-full bg-blue-100 text-blue-700 px-3 py-1 text-xs font-medium">🤝 {dealers.find(d => d.id === defaultDealerId)?.name}</span>
+              )}
+              {!savingDealer && !defaultDealerId && (
+                <span className="rounded-full bg-green-100 text-green-700 px-3 py-1 text-xs font-medium">ישיר</span>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -212,6 +263,7 @@ export function ClientTabs({ client, orgId }: { client: Client; orgId: string })
                   <th className="text-start px-4 py-2 font-medium text-gray-500">סוג פרויקט</th>
                   <th className="text-start px-4 py-2 font-medium text-gray-500">אתר</th>
                   <th className="text-start px-4 py-2 font-medium text-gray-500">גוף כשרות</th>
+                  <th className="text-start px-4 py-2 font-medium text-gray-500">סוכן</th>
                   <th className="text-start px-4 py-2 font-medium text-gray-500">סטטוס</th>
                   <th className="text-start px-4 py-2 font-medium text-gray-500">תאריך</th>
                 </tr>
@@ -219,7 +271,7 @@ export function ClientTabs({ client, orgId }: { client: Client; orgId: string })
               <tbody className="divide-y divide-gray-100">
                 {client.projects.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="text-center py-8 text-gray-400">
+                    <td colSpan={6} className="text-center py-8 text-gray-400">
                       אין פרויקטים עדיין
                     </td>
                   </tr>
@@ -234,6 +286,13 @@ export function ClientTabs({ client, orgId }: { client: Client; orgId: string })
                     </td>
                     <td className="px-4 py-2.5 text-gray-600">{p.site?.name || "—"}</td>
                     <td className="px-4 py-2.5 text-gray-600">{p.certBody?.name || "—"}</td>
+                    <td className="px-4 py-2.5">
+                      {p.dealer ? (
+                        <span className="rounded-full bg-blue-50 text-blue-600 border border-blue-200 px-2 py-0.5 text-xs font-medium">🤝 {p.dealer.name}</span>
+                      ) : (
+                        <span className="rounded-full bg-green-50 text-green-600 border border-green-200 px-2 py-0.5 text-xs font-medium">ישיר</span>
+                      )}
+                    </td>
                     <td className="px-4 py-2.5">
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${projectStatusColors[p.status] || "bg-gray-100 text-gray-600"}`}>
                         {projectStatusLabels[p.status] || p.status}
@@ -296,7 +355,24 @@ export function ClientTabs({ client, orgId }: { client: Client; orgId: string })
 
       {/* Finance */}
       {active === "finance" && (
-        <div>
+        <div className="space-y-5">
+          <ClientFinanceTab
+            client={{
+              id: client.id,
+              billingSource: client.billingSource,
+              agentCommissionDealerId: client.agentCommissionDealerId,
+              agentCommissionType: client.agentCommissionType,
+              agentCommissionValue: client.agentCommissionValue,
+              annualFee: client.annualFee,
+              annualFeeCurrency: client.annualFeeCurrency,
+              billingNotes: client.billingNotes,
+              priceItems: client.priceItems,
+            }}
+            dealers={dealers}
+          />
+
+          {/* Invoices */}
+          <div>
           <div className="flex justify-between items-center mb-3">
             <p className="text-sm text-gray-500">{client.invoices.length} חשבוניות אחרונות</p>
             <Link
@@ -340,6 +416,7 @@ export function ClientTabs({ client, orgId }: { client: Client; orgId: string })
                 ))}
               </tbody>
             </table>
+          </div>
           </div>
         </div>
       )}

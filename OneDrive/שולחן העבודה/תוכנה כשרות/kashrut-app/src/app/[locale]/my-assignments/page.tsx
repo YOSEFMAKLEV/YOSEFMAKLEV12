@@ -30,7 +30,7 @@ type AssignmentWithRelations = {
   id: string;
   status: string;
   scheduledAt: Date;
-  site: { name: string; country: string };
+  site: { name: string; country: string; address: string | null; latitude: number | null; longitude: number | null };
   project: { id: string; type: string; client: { name: string } } | null;
 };
 
@@ -61,6 +61,9 @@ function AssignmentRow({
           {a.project?.client?.name} ·{" "}
           {TYPE_LABELS[a.project?.type ?? ""] ?? a.project?.type}
         </p>
+        {a.site.address && (
+          <p className="text-xs text-gray-400 mt-0.5">{a.site.address}</p>
+        )}
         <p className="text-xs text-gray-400 mt-0.5">
           {new Date(a.scheduledAt).toLocaleDateString("he-IL", {
             weekday: "short",
@@ -70,21 +73,13 @@ function AssignmentRow({
           })}
         </p>
       </div>
-      <div className="flex items-center gap-3 shrink-0">
+      <div className="flex items-center gap-2 shrink-0">
         {showRelativeTime && (
-          <span
-            className={`text-xs font-medium ${
-              isFuture ? "text-blue-600" : "text-gray-400"
-            }`}
-          >
+          <span className={`text-xs font-medium ${isFuture ? "text-blue-600" : "text-gray-400"}`}>
             {isFuture ? `בעוד ${absDays} ימים` : `לפני ${absDays} ימים`}
           </span>
         )}
-        <span
-          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-            STATUS_COLORS[a.status] ?? "bg-gray-100 text-gray-600"
-          }`}
-        >
+        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[a.status] ?? "bg-gray-100 text-gray-600"}`}>
           {STATUS_LABELS[a.status] ?? a.status}
         </span>
         <Link
@@ -150,7 +145,7 @@ export default async function MyAssignmentsPage() {
   const now = new Date();
 
   const includeRelations = {
-    site: { select: { name: true, country: true } },
+    site: { select: { name: true, country: true, address: true, latitude: true, longitude: true } },
     project: {
       select: {
         id: true,
@@ -257,6 +252,7 @@ export default async function MyAssignmentsPage() {
               <AssignmentRow key={a.id} a={a} now={now} showRelativeTime={false} />
             ))}
           </Section>
+
         </div>
       )}
     </div>

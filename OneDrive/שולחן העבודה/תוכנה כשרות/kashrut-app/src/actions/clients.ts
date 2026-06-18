@@ -20,6 +20,7 @@ export async function getClients(organizationId: string, search?: string) {
     },
     include: {
       _count: { select: { sites: true, projects: true } },
+      defaultDealer: { select: { id: true, name: true } },
     },
     orderBy: { name: "asc" },
   });
@@ -29,11 +30,13 @@ export async function getClientById(id: string) {
   return prisma.client.findUnique({
     where: { id },
     include: {
+      defaultDealer: { select: { id: true, name: true } },
+      priceItems: { where: { isActive: true }, orderBy: { order: "asc" } },
       sites: { include: { _count: { select: { projects: true } } } },
       projects: {
         orderBy: { createdAt: "desc" },
         take: 10,
-        include: { site: true, certBody: true },
+        include: { site: true, certBody: true, dealer: { select: { id: true, name: true } } },
       },
       certificates: { orderBy: { issuedAt: "desc" }, take: 10 },
       invoices: { orderBy: { createdAt: "desc" }, take: 10 },
@@ -110,6 +113,28 @@ export async function updateClient(
 
   revalidatePath(`/clients/${id}`);
   return client;
+}
+
+export async function deleteClient(id: string, userId?: string) {
+  const client = await prisma.client.findUnique({
+    where: { id },
+    select: { name: true, organizationId: true },
+  });
+  if (!client) throw new Error("Client not found");
+
+  await prisma.activityLog.create({
+    data: {
+      organizationId: client.organizationId,
+      entityType: "client",
+      entityId: id,
+      action: "deleted",
+      description: `לקוח נמחק: ${client.name}`,
+      userId,
+    },
+  });
+
+  await prisma.client.delete({ where: { id } });
+  revalidatePath("/clients");
 }
 
 export async function addActivityNote(

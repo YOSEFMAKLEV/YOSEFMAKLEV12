@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSiteById } from "@/actions/sites";
 import { PortalLinkButton } from "@/components/portal/PortalLinkButton";
+import { SiteContactsCard } from "@/components/sites/SiteContactsCard";
 
 const siteTypeLabels: Record<string, string> = {
   FACTORY: "מפעל ייצור",
@@ -80,9 +81,6 @@ export default async function SiteDetailPage({
             <h2 className="font-semibold text-gray-900 mb-4">פרטי האתר</h2>
             <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
               {[
-                { label: "איש קשר", value: site.contactName },
-                { label: "טלפון", value: site.phone },
-                { label: "אימייל", value: site.email },
                 { label: "שפה", value: site.language },
                 { label: "אזור זמן", value: site.timezone },
                 { label: "דו\"ח פנימי", value: site.internalReport ? "כן" : "לא" },
@@ -95,6 +93,15 @@ export default async function SiteDetailPage({
               ))}
             </div>
           </div>
+
+          {/* Contacts */}
+          <SiteContactsCard
+            siteId={site.id}
+            contacts={site.contacts}
+            legacyName={site.contactName}
+            legacyPhone={site.phone}
+            legacyEmail={site.email}
+          />
 
           {/* Products */}
           <div className="rounded-xl border bg-white p-5">

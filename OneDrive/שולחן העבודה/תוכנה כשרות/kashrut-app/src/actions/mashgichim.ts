@@ -26,6 +26,29 @@ export async function getMashgichim(organizationId: string, search?: string) {
   });
 }
 
+export async function getMashgichimForAssign(organizationId: string) {
+  const now = new Date();
+  const future = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+  return prisma.mashgiach.findMany({
+    where: { organizationId, isActive: true },
+    select: {
+      id: true,
+      name: true,
+      city: true,
+      assignments: {
+        where: { scheduledAt: { gte: now, lte: future } },
+        select: {
+          scheduledAt: true,
+          scheduledEnd: true,
+          site: { select: { name: true } },
+        },
+        orderBy: { scheduledAt: "asc" },
+      },
+    },
+    orderBy: { name: "asc" },
+  });
+}
+
 export async function getMashgiachById(id: string) {
   return prisma.mashgiach.findUnique({
     where: { id },

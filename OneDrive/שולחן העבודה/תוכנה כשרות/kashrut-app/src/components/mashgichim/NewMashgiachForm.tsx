@@ -1,15 +1,187 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createMashgiach } from "@/actions/mashgichim";
 
 const ORG_ID = "org_demo";
 
-const COMMON_CITIZENSHIPS = ["ישראל", "ארה\"ב", "קנדה", "אנגליה", "צרפת", "ארגנטינה", "ברזיל", "אוסטרליה"];
-const COMMON_REGIONS = ["ישראל", "ארה\"ב", "אירופה", "אמריקה הלטינית", "אוסטרליה", "אסיה", "אפריקה"];
-const LANGUAGES = ["עברית", "אנגלית", "יידיש", "צרפתית", "ספרדית", "פורטוגזית", "גרמנית", "רוסית"];
-const LANG_LEVELS = { "שפת אם": "native", "שוטף": "fluent", "בסיסי": "basic" };
+const ALL_COUNTRIES = [
+  "ישראל","ארצות הברית","קנדה","בריטניה","צרפת","גרמניה","איטליה","ספרד",
+  "הולנד","בלגיה","שוויץ","אוסטריה","פולין","רוסיה","אוקראינה","בלרוס",
+  "ברזיל","ארגנטינה","מקסיקו","קולומביה","צ'ילה","פרו","אורוגוואי","פרגוואי",
+  "אוסטרליה","ניו זילנד","יפן","סין","הודו","קוריאה הדרומית","סינגפור","תאילנד",
+  "אינדונזיה","מלזיה","פיליפינים","וייטנאם","הונג קונג","טייוואן",
+  "דרום אפריקה","מרוקו","תוניסיה","מצרים","אלג'יריה","ניגריה","קניה","אתיופיה","גאנה",
+  "לבנון","ירדן","טורקיה","איראן","כווית","איחוד האמירויות","ערב הסעודית","קטר","בחריין","עומאן",
+  "שבדיה","נורווגיה","דנמרק","פינלנד","איסלנד",
+  "פורטוגל","יוון","הונגריה","צ'כיה","סלובקיה","רומניה","בולגריה",
+  "קרואטיה","סרביה","בוסניה","סלובניה","אלבניה","מקדוניה הצפונית",
+  "ליטא","לטביה","אסטוניה","גאורגיה","ארמניה","אזרבייג'ן",
+  "קזחסטן","אוזבקיסטן","טורקמניסטן","קירגיזסטן","טג'יקיסטן",
+  "אירלנד","מלטה","קפריסין","לוקסמבורג",
+  "פקיסטן","בנגלדש","סרי לנקה","נפאל","אפגניסטן",
+  "סודן","אוגנדה","טנזניה","מוזמביק","זימבבואה","זמביה","אנגולה","קמרון","סנגל","קוט דיוואר",
+  "אקוודור","בוליביה","ונצואלה","קוסטה ריקה","פנמה","גואטמלה","הונדורס","אל סלוודור","קובה","דומיניקנית",
+  "מולדובה","מונטנגרו","קוסובו","מקדוניה","לוב","ירדן","עיראק","סוריה","ישראל",
+];
+
+const ALL_LANGUAGES = [
+  "עברית","אנגלית","ערבית","יידיש","לדינו","צרפתית","ספרדית","פורטוגזית",
+  "גרמנית","הולנדית","איטלקית","פלמית","קטלנית","גליסית","רוסית","אוקראינית",
+  "פולנית","צ'כית","סלובקית","הונגרית","רומנית","בולגרית","קרואטית","סרבית",
+  "סלובנית","מקדונית","אלבנית","יוונית","טורקית","פרסית","אורדו","הינדית",
+  "בנגלית","מרטהית","פנג'אבית","גוג'ראטית","תמילית","טלוגו","קנדה (שפה)","מלאית",
+  "סינית מנדרינית","קנטונזית","יפנית","קוריאנית","ויאטנמית","תאית","אינדונזית","טגלוגית",
+  "סווהילי","אמהרית","הוסה","יורובה","איגבו","זולו","שונה","אפריקאנס",
+  "פינית","שוודית","נורווגית","דנית","איסלנדית","אסטונית","לטבית","ליטאית",
+  "גאורגית","ארמנית","אזרית","קזחית","אוזבקית","טורקמנית",
+  "פורטוגזית ברזילאית","ספרדית לטינו-אמריקאית",
+];
+
+const LANG_LEVELS = ["שפת אם", "שוטף", "בסיסי"];
+const LANG_LEVEL_CODES: Record<string, string> = { "שפת אם": "native", "שוטף": "fluent", "בסיסי": "basic" };
+const LANG_LEVEL_LABELS: Record<string, string> = { native: "שפת אם", fluent: "שוטף", basic: "בסיסי" };
+
+const COMMON_REGIONS = ["ישראל","ארה\"ב","אירופה","אמריקה הלטינית","אוסטרליה","אסיה","אפריקה","המזרח התיכון"];
+
+function SearchableTagInput({
+  allOptions, selected, onAdd, onRemove, placeholder, tagClass,
+}: {
+  allOptions: string[];
+  selected: string[];
+  onAdd: (val: string) => void;
+  onRemove: (val: string) => void;
+  placeholder: string;
+  tagClass: string;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const filtered = allOptions
+    .filter(o => !selected.includes(o) && o.includes(query))
+    .slice(0, 8);
+
+  function handleSelect(val: string) {
+    onAdd(val);
+    setQuery("");
+    setOpen(false);
+    inputRef.current?.focus();
+  }
+
+  return (
+    <div>
+      <div className="relative mb-2">
+        <input
+          ref={inputRef}
+          value={query}
+          onChange={e => { setQuery(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          placeholder={placeholder}
+          className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        {open && filtered.length > 0 && (
+          <div className="absolute top-full right-0 left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-sm z-20 max-h-44 overflow-y-auto">
+            {filtered.map(o => (
+              <div key={o} onMouseDown={() => handleSelect(o)}
+                className="px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 hover:text-blue-700 text-right">
+                {o}
+              </div>
+            ))}
+          </div>
+        )}
+        {open && query.length > 0 && filtered.length === 0 && (
+          <div className="absolute top-full right-0 left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-sm z-20 px-3 py-2 text-sm text-gray-400 text-right">
+            לא נמצא — בחר מהרשימה
+          </div>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {selected.map(val => (
+          <span key={val} className={`flex items-center gap-1 rounded-full px-3 py-0.5 text-xs font-medium ${tagClass}`}>
+            {val}
+            <button type="button" onClick={() => onRemove(val)} className="hover:opacity-70 ms-0.5">×</button>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function LanguageTagInput({
+  languages, onAdd, onRemove,
+}: {
+  languages: Record<string, string>;
+  onAdd: (lang: string, level: string) => void;
+  onRemove: (lang: string) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const [level, setLevel] = useState("שוטף");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const selected = Object.keys(languages);
+  const filtered = ALL_LANGUAGES
+    .filter(l => !selected.includes(l) && l.includes(query))
+    .slice(0, 8);
+
+  function handleSelect(lang: string) {
+    onAdd(lang, LANG_LEVEL_CODES[level] ?? "fluent");
+    setQuery("");
+    setOpen(false);
+    inputRef.current?.focus();
+  }
+
+  return (
+    <div>
+      <div className="flex gap-2 mb-2">
+        <div className="relative flex-1">
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={e => { setQuery(e.target.value); setOpen(true); }}
+            onFocus={() => setOpen(true)}
+            onBlur={() => setTimeout(() => setOpen(false), 150)}
+            placeholder="הקלד שפה לחיפוש..."
+            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {open && filtered.length > 0 && (
+            <div className="absolute top-full right-0 left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-sm z-20 max-h-44 overflow-y-auto">
+              {filtered.map(l => (
+                <div key={l} onMouseDown={() => handleSelect(l)}
+                  className="px-3 py-2 text-sm cursor-pointer hover:bg-purple-50 hover:text-purple-700 text-right">
+                  {l}
+                </div>
+              ))}
+            </div>
+          )}
+          {open && query.length > 0 && filtered.length === 0 && (
+            <div className="absolute top-full right-0 left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-sm z-20 px-3 py-2 text-sm text-gray-400 text-right">
+              לא נמצא — בחר מהרשימה
+            </div>
+          )}
+        </div>
+        <select
+          value={level}
+          onChange={e => setLevel(e.target.value)}
+          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm bg-white focus:outline-none"
+        >
+          {LANG_LEVELS.map(l => <option key={l}>{l}</option>)}
+        </select>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {Object.entries(languages).map(([lang, lvl]) => (
+          <span key={lang} className="flex items-center gap-1 rounded-full bg-purple-50 text-purple-700 px-3 py-0.5 text-xs font-medium">
+            {lang} · {LANG_LEVEL_LABELS[lvl] ?? lvl}
+            <button type="button" onClick={() => onRemove(lang)} className="hover:opacity-70 ms-0.5">×</button>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function NewMashgiachForm() {
   const router = useRouter();
@@ -18,16 +190,17 @@ export function NewMashgiachForm() {
   const [citizenships, setCitizenships] = useState<string[]>([]);
   const [regions, setRegions] = useState<string[]>([]);
   const [languages, setLanguages] = useState<Record<string, string>>({});
-  const [langInput, setLangInput] = useState({ lang: LANGUAGES[0], level: "שוטף" });
 
-  function toggleItem(arr: string[], setArr: (v: string[]) => void, item: string) {
-    setArr(arr.includes(item) ? arr.filter((x) => x !== item) : [...arr, item]);
+  function toggleRegion(r: string) {
+    setRegions(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r]);
   }
 
-  function addLanguage() {
-    if (langInput.lang) {
-      setLanguages({ ...languages, [langInput.lang]: LANG_LEVELS[langInput.level as keyof typeof LANG_LEVELS] ?? "fluent" });
-    }
+  function addLanguage(lang: string, level: string) {
+    setLanguages(prev => ({ ...prev, [lang]: level }));
+  }
+
+  function removeLanguage(lang: string) {
+    setLanguages(prev => { const n = { ...prev }; delete n[lang]; return n; });
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -89,14 +262,14 @@ export function NewMashgiachForm() {
       {/* Citizenships */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">אזרחויות</label>
-        <div className="flex flex-wrap gap-2">
-          {COMMON_CITIZENSHIPS.map((c) => (
-            <button key={c} type="button" onClick={() => toggleItem(citizenships, setCitizenships, c)}
-              className={`rounded-full px-3 py-1 text-xs font-medium border transition-colors ${citizenships.includes(c) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"}`}>
-              {c}
-            </button>
-          ))}
-        </div>
+        <SearchableTagInput
+          allOptions={ALL_COUNTRIES}
+          selected={citizenships}
+          onAdd={v => setCitizenships(prev => [...prev, v])}
+          onRemove={v => setCitizenships(prev => prev.filter(c => c !== v))}
+          placeholder="הקלד מדינה לחיפוש..."
+          tagClass="bg-blue-50 text-blue-700"
+        />
       </div>
 
       {/* Active regions */}
@@ -104,7 +277,7 @@ export function NewMashgiachForm() {
         <label className="block text-sm font-medium text-gray-700 mb-2">אזורי פעילות</label>
         <div className="flex flex-wrap gap-2">
           {COMMON_REGIONS.map((r) => (
-            <button key={r} type="button" onClick={() => toggleItem(regions, setRegions, r)}
+            <button key={r} type="button" onClick={() => toggleRegion(r)}
               className={`rounded-full px-3 py-1 text-xs font-medium border transition-colors ${regions.includes(r) ? "bg-green-600 text-white border-green-600" : "bg-white text-gray-600 border-gray-300 hover:border-green-400"}`}>
               {r}
             </button>
@@ -115,25 +288,11 @@ export function NewMashgiachForm() {
       {/* Languages */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">שפות</label>
-        <div className="flex gap-2 mb-2">
-          <select value={langInput.lang} onChange={(e) => setLangInput({ ...langInput, lang: e.target.value })}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm bg-white focus:outline-none">
-            {LANGUAGES.map((l) => <option key={l}>{l}</option>)}
-          </select>
-          <select value={langInput.level} onChange={(e) => setLangInput({ ...langInput, level: e.target.value })}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm bg-white focus:outline-none">
-            {Object.keys(LANG_LEVELS).map((l) => <option key={l}>{l}</option>)}
-          </select>
-          <button type="button" onClick={addLanguage} className="rounded-lg bg-gray-100 px-3 py-1.5 text-sm hover:bg-gray-200">הוסף</button>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {Object.entries(languages).map(([lang, level]) => (
-            <span key={lang} className="flex items-center gap-1 rounded-full bg-purple-50 text-purple-700 px-3 py-0.5 text-xs">
-              {lang} ({level === "native" ? "שפת אם" : level === "fluent" ? "שוטף" : "בסיסי"})
-              <button type="button" onClick={() => { const n = { ...languages }; delete n[lang]; setLanguages(n); }} className="text-purple-400 hover:text-purple-700">×</button>
-            </span>
-          ))}
-        </div>
+        <LanguageTagInput
+          languages={languages}
+          onAdd={addLanguage}
+          onRemove={removeLanguage}
+        />
       </div>
 
       {/* Salary */}

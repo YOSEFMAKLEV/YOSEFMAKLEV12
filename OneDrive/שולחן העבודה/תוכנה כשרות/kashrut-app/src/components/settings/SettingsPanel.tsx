@@ -6,20 +6,48 @@ import { createCertBody, updateCertBody, createSupervisionLevel, updateSupervisi
 
 type CertBody = { id: string; name: string; nameEn: string | null; country: string | null; isActive: boolean };
 type Level = { id: string; name: string; nameEn: string | null; color: string | null; isActive: boolean };
+type LogEntry = {
+  id: string;
+  action: string;
+  entityType: string;
+  description: string;
+  createdAt: Date;
+  user: { name: string; role: string } | null;
+  client: { name: string } | null;
+  site: { name: string } | null;
+};
 
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#6b7280", "#0891b2", "#be185d"];
+
+const ACTION_LABELS: Record<string, { label: string; color: string }> = {
+  login:               { label: "כניסה",        color: "bg-green-100 text-green-700" },
+  created:             { label: "יצירה",         color: "bg-blue-100 text-blue-700" },
+  updated:             { label: "עדכון",         color: "bg-amber-100 text-amber-700" },
+  deleted:             { label: "מחיקה",         color: "bg-red-100 text-red-700" },
+  certificate_issued:  { label: "הפקת תעודה",    color: "bg-purple-100 text-purple-700" },
+  certificate_sent:    { label: "שליחת תעודה",   color: "bg-teal-100 text-teal-700" },
+  certificate_released:{ label: "שחרור תעודה",   color: "bg-teal-100 text-teal-700" },
+  note:                { label: "הערה",          color: "bg-gray-100 text-gray-600" },
+};
+
+function formatDateTime(d: Date) {
+  return new Intl.DateTimeFormat("he-IL", { dateStyle: "short", timeStyle: "short" }).format(new Date(d));
+}
 
 export function SettingsPanel({
   certBodies,
   levels,
   orgId,
+  activityLogs = [],
 }: {
   certBodies: CertBody[];
   levels: Level[];
   orgId: string;
+  activityLogs?: LogEntry[];
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<"certbodies" | "levels">("certbodies");
+  const [tab, setTab] = useState<"certbodies" | "levels" | "log">("certbodies");
+  const [logFilter, setLogFilter] = useState("");
 
   // Cert body form state
   const [cbName, setCbName] = useState("");
@@ -61,11 +89,21 @@ export function SettingsPanel({
     router.refresh();
   }
 
+  const filteredLogs = logFilter
+    ? activityLogs.filter(l => l.action === logFilter)
+    : activityLogs;
+
+  const uniqueActions = [...new Set(activityLogs.map(l => l.action))];
+
   return (
     <div>
       {/* Tabs */}
       <div className="flex gap-1 border-b mb-6">
-        {([["certbodies", "גופי כשרות"], ["levels", "רמות השגחה"]] as const).map(([id, label]) => (
+        {([
+          ["certbodies", "גופי כשרות"],
+          ["levels", "רמות השגחה"],
+          ["log", `לוג פעילות${activityLogs.length > 0 ? ` (${activityLogs.length})` : ""}`],
+        ] as const).map(([id, label]) => (
           <button key={id} onClick={() => setTab(id)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === id ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
             {label}
@@ -76,7 +114,6 @@ export function SettingsPanel({
       {/* Cert Bodies */}
       {tab === "certbodies" && (
         <div className="space-y-4">
-          {/* Add form */}
           <div className="rounded-xl border bg-white p-5">
             <h2 className="font-semibold text-gray-900 mb-4">הוסף גוף כשרות</h2>
             <div className="grid grid-cols-3 gap-3 mb-3">
@@ -89,7 +126,6 @@ export function SettingsPanel({
             </button>
           </div>
 
-          {/* List */}
           <div className="rounded-xl border bg-white overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b">
@@ -182,6 +218,70 @@ export function SettingsPanel({
                     </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Activity Log */}
+      {tab === "log" && (
+        <div className="space-y-4">
+          {/* Filter bar */}
+          <div className="flex items-center gap-3">
+            <select
+              value={logFilter}
+              onChange={e => setLogFilter(e.target.value)}
+              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">כל הפעולות</option>
+              {uniqueActions.map(a => (
+                <option key={a} value={a}>{ACTION_LABELS[a]?.label ?? a}</option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-400">{filteredLogs.length} רשומות</p>
+          </div>
+
+          <div className="rounded-xl border bg-white overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">תאריך ושעה</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">פעולה</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">תיאור</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">משתמש</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">ישות</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredLogs.length === 0 && (
+                  <tr><td colSpan={5} className="text-center py-8 text-gray-400">אין רשומות לוג</td></tr>
+                )}
+                {filteredLogs.map(log => {
+                  const actionInfo = ACTION_LABELS[log.action];
+                  return (
+                    <tr key={log.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{formatDateTime(log.createdAt)}</td>
+                      <td className="px-4 py-3">
+                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${actionInfo?.color ?? "bg-gray-100 text-gray-600"}`}>
+                          {actionInfo?.label ?? log.action}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-700 max-w-xs truncate" title={log.description}>{log.description}</td>
+                      <td className="px-4 py-3 text-gray-500 text-xs">
+                        {log.user ? (
+                          <div>
+                            <p className="font-medium text-gray-700">{log.user.name}</p>
+                            <p className="text-gray-400">{log.user.role}</p>
+                          </div>
+                        ) : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-500">
+                        {log.client?.name ?? log.site?.name ?? log.entityType ?? "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

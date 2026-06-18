@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { updateProjectStatus } from "@/actions/projects";
+import { updateProjectStatus, updateProject } from "@/actions/projects";
 import Link from "next/link";
+import { ProjectBillingTab } from "./ProjectBillingTab";
 
 type Assignment = {
   id: string; scheduledAt: Date; scheduledEnd: Date | null;
@@ -12,15 +13,27 @@ type Assignment = {
 type Certificate = { id: string; issuedAt: Date; expiresAt: Date; status: string; pdfUrl: string | null };
 type Invoice = { id: string; number: string; total: number; status: string; dueDate: Date | null };
 type Log = { id: string; description: string; createdAt: Date; user: { name: string } | null };
+type PriceItem = { id: string; name: string; unitLabel: string | null; price: number; currency: string };
+type LineItem = {
+  id: string; description: string; quantity: number; unitPrice: number;
+  currency: string; notes: string | null; priceItemId: string | null;
+  priceItem: { id: string; name: string; unitLabel: string | null } | null;
+};
 
 type Project = {
   id: string; status: string; type: string;
-  openedAt: Date; plannedVisitAt: Date | null; actualVisitAt: Date | null; completedAt: Date | null;
+  openedAt: Date;
+  plannedVisitAt: Date | null;
+  plannedVisitEnd: Date | null;
+  actualVisitAt: Date | null;
+  completedAt: Date | null;
   notes: string | null;
   assignments: Assignment[];
   certificates: Certificate[];
   invoices: Invoice[];
   activityLogs: Log[];
+  priceItems: PriceItem[];
+  lineItems: LineItem[];
 };
 
 const STATUS_NEXT: Record<string, string | null> = {
@@ -42,8 +55,19 @@ const INV_STATUS_LABELS: Record<string, string> = {
 
 export function ProjectDetailClient({ project }: { project: Project }) {
   const router = useRouter();
-  const [tab, setTab] = useState<"info" | "assignments" | "certificates" | "invoices" | "activity">("info");
+  const [tab, setTab] = useState<"info" | "assignments" | "certificates" | "billing" | "invoices" | "activity">("info");
   const [advancing, setAdvancing] = useState(false);
+  const [editingDate, setEditingDate] = useState<{ field: "plannedVisitAt" | "plannedVisitEnd"; draft: string } | null>(null);
+  const [savingDate, setSavingDate] = useState(false);
+
+  async function handleDateSave() {
+    if (!editingDate || !editingDate.draft) return;
+    setSavingDate(true);
+    await updateProject(project.id, { [editingDate.field]: new Date(editingDate.draft) });
+    setEditingDate(null);
+    setSavingDate(false);
+    router.refresh();
+  }
 
   const nextStatus = STATUS_NEXT[project.status];
 
@@ -59,6 +83,7 @@ export function ProjectDetailClient({ project }: { project: Project }) {
     { id: "info" as const, label: "פרטים" },
     { id: "assignments" as const, label: `שיבוצים (${project.assignments.length})` },
     { id: "certificates" as const, label: `תעודות (${project.certificates.length})` },
+    { id: "billing" as const, label: `חיוב (${project.lineItems.length})` },
     { id: "invoices" as const, label: `חשבוניות (${project.invoices.length})` },
     { id: "activity" as const, label: "פעילות" },
   ];
@@ -93,9 +118,9 @@ export function ProjectDetailClient({ project }: { project: Project }) {
       {tab === "info" && (
         <div className="rounded-xl border bg-white p-5 space-y-4">
           <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
+            {/* Static rows */}
             {[
               { label: "נפתח", value: new Date(project.openedAt).toLocaleDateString("he-IL") },
-              { label: "ביקור מתוכנן", value: project.plannedVisitAt ? new Date(project.plannedVisitAt).toLocaleDateString("he-IL") : "—" },
               { label: "ביקור בפועל", value: project.actualVisitAt ? new Date(project.actualVisitAt).toLocaleDateString("he-IL") : "—" },
               { label: "הושלם", value: project.completedAt ? new Date(project.completedAt).toLocaleDateString("he-IL") : "—" },
             ].map(({ label, value }) => (
@@ -104,7 +129,82 @@ export function ProjectDetailClient({ project }: { project: Project }) {
                 <span className="font-medium text-gray-900">{value}</span>
               </div>
             ))}
+
+            {/* Editable: מתאריך */}
+            <div className="flex justify-between items-center py-1 border-b border-gray-50">
+              <span className="text-gray-500">מתאריך</span>
+              {editingDate?.field === "plannedVisitAt" ? (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="date"
+                    autoFocus
+                    value={editingDate.draft}
+                    disabled={savingDate}
+                    onChange={(e) => setEditingDate({ ...editingDate, draft: e.target.value })}
+                    onKeyDown={(e) => { if (e.key === "Escape") setEditingDate(null); if (e.key === "Enter" && editingDate.draft) handleDateSave(); }}
+                    className="rounded border border-blue-300 px-2 py-0.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                  <button onClick={handleDateSave} disabled={!editingDate.draft || savingDate}
+                    className="w-7 h-7 rounded-md flex items-center justify-center bg-blue-600 text-white disabled:opacity-30 hover:bg-blue-700 transition-colors" title="שמור">
+                    <svg width="11" height="11" viewBox="0 0 10 10" fill="none"><path d="M1.5 5L4 7.5L8.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </button>
+                  <button onClick={() => setEditingDate(null)}
+                    className="w-7 h-7 rounded-md flex items-center justify-center border border-gray-200 bg-gray-50 text-gray-400 hover:bg-gray-100 transition-colors" title="ביטול">
+                    <svg width="11" height="11" viewBox="0 0 10 10" fill="none"><path d="M2 2l6 6M8 2L2 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setEditingDate({ field: "plannedVisitAt", draft: project.plannedVisitAt ? new Date(project.plannedVisitAt).toISOString().slice(0, 10) : "" })}
+                  title="לחץ לעריכה"
+                  className="font-medium text-gray-900 hover:text-blue-600 hover:underline transition-colors flex items-center gap-1 group"
+                >
+                  {project.plannedVisitAt ? new Date(project.plannedVisitAt).toLocaleDateString("he-IL") : <span className="text-gray-400">— הוסף תאריך</span>}
+                  <svg width="11" height="11" viewBox="0 0 15 15" fill="none" className="opacity-0 group-hover:opacity-100 transition-opacity text-blue-400">
+                    <path d="M11.85 1.15a1 1 0 00-1.41 0L3.71 7.88l-.5 2.72 2.71-.5 6.75-6.75a1 1 0 000-1.2z" stroke="currentColor" strokeWidth="1.2"/>
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            {/* Editable: עד תאריך */}
+            <div className="flex justify-between items-center py-1 border-b border-gray-50">
+              <span className="text-gray-500">עד תאריך</span>
+              {editingDate?.field === "plannedVisitEnd" ? (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="date"
+                    autoFocus
+                    value={editingDate.draft}
+                    disabled={savingDate}
+                    onChange={(e) => setEditingDate({ ...editingDate, draft: e.target.value })}
+                    onKeyDown={(e) => { if (e.key === "Escape") setEditingDate(null); if (e.key === "Enter" && editingDate.draft) handleDateSave(); }}
+                    className="rounded border border-blue-300 px-2 py-0.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                  <button onClick={handleDateSave} disabled={!editingDate.draft || savingDate}
+                    className="w-7 h-7 rounded-md flex items-center justify-center bg-blue-600 text-white disabled:opacity-30 hover:bg-blue-700 transition-colors" title="שמור">
+                    <svg width="11" height="11" viewBox="0 0 10 10" fill="none"><path d="M1.5 5L4 7.5L8.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </button>
+                  <button onClick={() => setEditingDate(null)}
+                    className="w-7 h-7 rounded-md flex items-center justify-center border border-gray-200 bg-gray-50 text-gray-400 hover:bg-gray-100 transition-colors" title="ביטול">
+                    <svg width="11" height="11" viewBox="0 0 10 10" fill="none"><path d="M2 2l6 6M8 2L2 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setEditingDate({ field: "plannedVisitEnd", draft: project.plannedVisitEnd ? new Date(project.plannedVisitEnd).toISOString().slice(0, 10) : "" })}
+                  title="לחץ לעריכה"
+                  className="font-medium text-gray-900 hover:text-blue-600 hover:underline transition-colors flex items-center gap-1 group"
+                >
+                  {project.plannedVisitEnd ? new Date(project.plannedVisitEnd).toLocaleDateString("he-IL") : <span className="text-gray-400">— הוסף תאריך</span>}
+                  <svg width="11" height="11" viewBox="0 0 15 15" fill="none" className="opacity-0 group-hover:opacity-100 transition-opacity text-blue-400">
+                    <path d="M11.85 1.15a1 1 0 00-1.41 0L3.71 7.88l-.5 2.72 2.71-.5 6.75-6.75a1 1 0 000-1.2z" stroke="currentColor" strokeWidth="1.2"/>
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
+
           {project.notes && (
             <div>
               <p className="text-xs font-medium text-gray-500 mb-1">הערות</p>
@@ -186,6 +286,15 @@ export function ProjectDetailClient({ project }: { project: Project }) {
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Billing tab */}
+      {tab === "billing" && (
+        <ProjectBillingTab
+          projectId={project.id}
+          priceItems={project.priceItems}
+          lineItems={project.lineItems}
+        />
       )}
 
       {/* Invoices tab */}

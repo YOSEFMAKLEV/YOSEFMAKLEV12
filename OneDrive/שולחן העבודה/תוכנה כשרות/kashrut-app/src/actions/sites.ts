@@ -31,6 +31,7 @@ export async function getSiteById(id: string) {
     where: { id },
     include: {
       client: true,
+      contacts: { orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }] },
       products: { orderBy: { name: "asc" } },
       productionPoints: { include: { mashgichim: { include: { mashgiach: true } } } },
       projects: {
@@ -58,15 +59,23 @@ export async function createSite(data: {
   timezone: string;
   latitude?: number;
   longitude?: number;
-  contactName?: string;
-  phone?: string;
-  email?: string;
   language?: string;
   internalReport?: boolean;
   rabbinateReport?: boolean;
   createdByUserId?: string;
+  contacts?: { name: string; role?: string; phone?: string; email?: string }[];
 }) {
-  const site = await prisma.site.create({ data });
+  const { contacts, createdByUserId, ...siteData } = data;
+  const site = await prisma.site.create({ data: siteData });
+
+  if (contacts && contacts.length > 0) {
+    const filtered = contacts.filter(c => c.name.trim());
+    if (filtered.length > 0) {
+      await prisma.siteContact.createMany({
+        data: filtered.map((c, i) => ({ ...c, siteId: site.id, isPrimary: i === 0 })),
+      });
+    }
+  }
 
   await prisma.activityLog.create({
     data: {
@@ -75,13 +84,39 @@ export async function createSite(data: {
       entityId: site.id,
       action: "created",
       description: `מפעל/עסק נוצר: ${site.name}`,
-      userId: data.createdByUserId,
+      userId: createdByUserId,
       siteId: site.id,
     },
   });
 
   revalidatePath("/sites");
   return site;
+}
+
+export async function upsertSiteContact(
+  siteId: string,
+  contactId: string | null,
+  data: { name: string; role?: string; phone?: string; email?: string; isPrimary?: boolean }
+) {
+  if (contactId) {
+    const c = await prisma.siteContact.update({ where: { id: contactId }, data });
+    revalidatePath(`/sites/${siteId}`);
+    return c;
+  }
+  const c = await prisma.siteContact.create({ data: { ...data, siteId } });
+  revalidatePath(`/sites/${siteId}`);
+  return c;
+}
+
+export async function deleteSiteContact(siteId: string, contactId: string) {
+  await prisma.siteContact.delete({ where: { id: contactId } });
+  revalidatePath(`/sites/${siteId}`);
+}
+
+export async function setSiteContactPrimary(siteId: string, contactId: string) {
+  await prisma.siteContact.updateMany({ where: { siteId }, data: { isPrimary: false } });
+  await prisma.siteContact.update({ where: { id: contactId }, data: { isPrimary: true } });
+  revalidatePath(`/sites/${siteId}`);
 }
 
 export async function updateSite(
@@ -121,4 +156,27 @@ export async function updateSite(
 
   revalidatePath(`/sites/${id}`);
   return site;
+}
+
+export async function deleteSite(id: string, userId?: string) {
+  const site = await prisma.site.findUnique({
+    where: { id },
+    select: { name: true, organizationId: true },
+  });
+  if (!site) throw new Error("Site not found");
+
+  await prisma.activityLog.create({
+    data: {
+      organizationId: site.organizationId,
+      entityType: "site",
+      entityId: id,
+      action: "deleted",
+      description: `מפעל/עסק נמחק: ${site.name}`,
+      userId,
+      siteId: id,
+    },
+  });
+
+  await prisma.site.delete({ where: { id } });
+  revalidatePath("/sites");
 }

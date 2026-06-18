@@ -4,6 +4,7 @@ import { getMessages } from "next-intl/server";
 import { Geist } from "next/font/google";
 import { SessionProvider } from "next-auth/react";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import "../globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
@@ -32,7 +33,10 @@ export default async function LocaleLayout({
             <div className="flex min-h-screen">
               <Sidebar />
               <main className="flex-1 ps-64">
-                <div className="p-6">{children}</div>
+                <div className="p-6">
+                  <Breadcrumb />
+                  {children}
+                </div>
               </main>
             </div>
           </NextIntlClientProvider>

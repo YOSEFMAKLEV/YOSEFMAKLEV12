@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getClientById } from "@/actions/clients";
+import { getDealers } from "@/actions/dealers";
 import { ActivityDrawer } from "@/components/shared/ActivityDrawer";
 import { ClientTabs } from "@/components/clients/ClientTabs";
 import { PortalLinkButton } from "@/components/portal/PortalLinkButton";
@@ -24,7 +25,10 @@ export default async function ClientDetailPage({
   params: Promise<{ id: string; locale: string }>;
 }) {
   const { id } = await params;
-  const client = await getClientById(id).catch(() => null);
+  const [client, dealers] = await Promise.all([
+    getClientById(id).catch(() => null),
+    getDealers(ORG_ID).catch(() => []),
+  ]);
   if (!client) notFound();
 
   return (
@@ -72,7 +76,7 @@ export default async function ClientDetailPage({
         </div>
 
         {/* Tabs */}
-        <ClientTabs client={client} orgId={ORG_ID} />
+        <ClientTabs client={client} orgId={ORG_ID} dealers={dealers.map(d => ({ id: d.id, name: d.name }))} />
       </div>
 
       {/* Activity sidebar */}

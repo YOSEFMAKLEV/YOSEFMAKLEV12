@@ -109,6 +109,42 @@ export default async function AssignmentDetailPage({
             </div>
           )}
         </div>
+
+        {/* Navigation buttons — below travel details */}
+        {(assignment.site.address || (assignment.site.latitude && assignment.site.longitude)) && (
+          <div className="flex gap-3 mt-4 pt-4 border-t border-gray-100">
+            <a
+              href={
+                assignment.site.latitude && assignment.site.longitude
+                  ? `https://waze.com/ul?ll=${assignment.site.latitude},${assignment.site.longitude}&navigate=yes`
+                  : `https://waze.com/ul?q=${encodeURIComponent(assignment.site.address ?? assignment.site.name)}&navigate=yes`
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-2 rounded-xl border-2 border-[#009cde] bg-[#e8f7fd] hover:bg-[#d0f0fc] py-3 text-sm font-semibold text-[#006b9f] transition-colors"
+            >
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="#009cde" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20.54 7.23A9 9 0 1 0 4.54 18.1l-.1 2.15a1 1 0 0 0 1.37 1l2-.8A9 9 0 0 0 20.54 7.23zM9 13a1.5 1.5 0 1 1 1.5-1.5A1.5 1.5 0 0 1 9 13zm6 0a1.5 1.5 0 1 1 1.5-1.5A1.5 1.5 0 0 1 15 13z"/>
+              </svg>
+              נווט ב-Waze
+            </a>
+            <a
+              href={
+                assignment.site.latitude && assignment.site.longitude
+                  ? `https://www.google.com/maps/search/?api=1&query=${assignment.site.latitude},${assignment.site.longitude}`
+                  : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(assignment.site.address ?? assignment.site.name)}`
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-2 rounded-xl border-2 border-[#ea4335] bg-[#fef2f2] hover:bg-[#fee2e2] py-3 text-sm font-semibold text-[#b91c1c] transition-colors"
+            >
+              <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#ea4335"/>
+              </svg>
+              Google Maps
+            </a>
+          </div>
+        )}
       </div>
 
       {/* Report form */}

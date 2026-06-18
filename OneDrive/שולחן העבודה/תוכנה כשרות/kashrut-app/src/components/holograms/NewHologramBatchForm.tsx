@@ -6,14 +6,18 @@ import { createHologramBatch } from "@/actions/holograms";
 
 const ORG_ID = "org_demo";
 
-export function NewHologramBatchForm() {
+type CertBody = { id: string; name: string };
+
+export function NewHologramBatchForm({ certBodies }: { certBodies: CertBody[] }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [certBodyId, setCertBodyId] = useState("");
 
   const count = from && to ? Math.max(0, parseInt(to) - parseInt(from) + 1) : 0;
+  const selectedCertBody = certBodies.find((cb) => cb.id === certBodyId);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -23,12 +27,17 @@ export function NewHologramBatchForm() {
       setError("המספר האחרון חייב להיות גדול מהראשון");
       return;
     }
+    if (!certBodyId) {
+      setError("נא לבחור גוף כשרות");
+      return;
+    }
     setSaving(true);
     setError("");
     const fd = new FormData(e.currentTarget);
     try {
       await createHologramBatch({
         organizationId: ORG_ID,
+        certBodyId,
         rangeFrom,
         rangeTo,
         notes: (fd.get("notes") as string) || undefined,
@@ -44,7 +53,25 @@ export function NewHologramBatchForm() {
     <form onSubmit={handleSubmit} className="rounded-xl border bg-white p-6 space-y-5">
       <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800">
         <p className="font-medium mb-1">הוראות</p>
-        <p>הזן את טווח המספרים הסידוריים שהתקבלו. המספרים נרשמים ידנית — אין סריקת ברקוד.</p>
+        <p>הזן את גוף הכשרות וטווח המספרים הסידוריים שהתקבלו. כל מנה שייכת לגוף כשרות אחד.</p>
+      </div>
+
+      {/* Cert body */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          גוף כשרות <span className="text-red-500">*</span>
+        </label>
+        <select
+          value={certBodyId}
+          onChange={(e) => setCertBodyId(e.target.value)}
+          required
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">בחר גוף כשרות...</option>
+          {certBodies.map((cb) => (
+            <option key={cb.id} value={cb.id}>{cb.name}</option>
+          ))}
+        </select>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -74,9 +101,10 @@ export function NewHologramBatchForm() {
         </div>
       </div>
 
-      {count > 0 && (
+      {count > 0 && selectedCertBody && (
         <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm font-medium text-green-700">
-          ✓ סה"כ {count.toLocaleString()} הולוגרמות בטווח {parseInt(from).toLocaleString()}–{parseInt(to).toLocaleString()}
+          ✓ {count.toLocaleString()} הולוגרמות של <span className="font-bold">{selectedCertBody.name}</span>
+          {" "}· טווח {parseInt(from).toLocaleString()}–{parseInt(to).toLocaleString()}
         </div>
       )}
 
@@ -95,10 +123,16 @@ export function NewHologramBatchForm() {
       )}
 
       <div className="flex gap-3 pt-2">
-        <button type="submit" disabled={saving || count === 0} className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+        <button
+          type="submit"
+          disabled={saving || count === 0 || !certBodyId}
+          className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+        >
           {saving ? "שומר..." : "שמור מנה"}
         </button>
-        <a href="/holograms" className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 text-center">ביטול</a>
+        <a href="/holograms" className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 text-center">
+          ביטול
+        </a>
       </div>
     </form>
   );

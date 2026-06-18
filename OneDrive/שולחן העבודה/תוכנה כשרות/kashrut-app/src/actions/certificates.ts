@@ -9,7 +9,7 @@ export async function getCertificates(organizationId: string) {
     where: { organizationId },
     include: {
       client: { select: { id: true, name: true, certRelease: true } },
-      project: { select: { id: true, type: true, site: { select: { name: true } } } },
+      project: { select: { id: true, type: true, site: { select: { name: true, country: true } } } },
       certBody: { select: { id: true, name: true } },
     },
     orderBy: { issuedAt: "desc" },

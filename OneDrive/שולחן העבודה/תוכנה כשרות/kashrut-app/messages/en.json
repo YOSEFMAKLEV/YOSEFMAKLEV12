@@ -9,12 +9,15 @@
     "scheduling": "Scheduling",
     "reports": "Reports",
     "holograms": "Holograms",
+    "rawMaterials": "Raw Materials",
     "certificates": "Certificates",
     "finance": "Finance",
     "alerts": "Alerts",
     "settings": "Settings",
-    "dealers": "Dealers",
-    "myAssignments": "My Assignments"
+    "dealers": "Kashrut Agents",
+    "myAssignments": "My Assignments",
+    "myHolograms": "My Holograms",
+    "myProfile": "My Profile"
   },
   "common": {
     "save": "Save",

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getMashgiachById } from "@/actions/mashgichim";
+import { getOfficeMessagesForMashgiach } from "@/actions/officeMessages";
 import { MashgiachDetail } from "@/components/mashgichim/MashgiachDetail";
 
 export default async function MashgiachDetailPage({
@@ -9,8 +10,13 @@ export default async function MashgiachDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const m = await getMashgiachById(id).catch(() => null);
+  const [m, messages] = await Promise.all([
+    getMashgiachById(id).catch(() => null),
+    getOfficeMessagesForMashgiach(id).catch(() => []),
+  ]);
   if (!m) notFound();
+
+  const unreadCount = messages.filter((msg: { status: string }) => msg.status === "UNREAD").length;
 
   return (
     <div>
@@ -32,6 +38,11 @@ export default async function MashgiachDetailPage({
             </span>
             {m.city && <span className="text-gray-400 text-sm">📍 {m.city}</span>}
             {m.phone && <span className="text-gray-400 text-sm">📞 {m.phone}</span>}
+            {unreadCount > 0 && (
+              <span className="rounded-full bg-blue-600 text-white text-xs px-2.5 py-0.5 font-medium">
+                {unreadCount} הודעות חדשות
+              </span>
+            )}
           </div>
         </div>
         <Link href={`/mashgichim/${id}/edit`} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
@@ -39,7 +50,7 @@ export default async function MashgiachDetailPage({
         </Link>
       </div>
 
-      <MashgiachDetail m={m as Parameters<typeof MashgiachDetail>[0]["m"]} />
+      <MashgiachDetail m={m as Parameters<typeof MashgiachDetail>[0]["m"]} messages={messages} />
     </div>
   );
 }

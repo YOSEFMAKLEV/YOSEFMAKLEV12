@@ -1,6 +1,6 @@
 {
   "nav": {
-    "dashboard": "דשבורד",
+    "dashboard": "דף הבית",
     "clients": "לקוחות",
     "sites": "מפעלים/עסקים",
     "products": "מוצרים",
@@ -9,12 +9,15 @@
     "scheduling": "שיבוץ",
     "reports": "דיווחים",
     "holograms": "הולוגרמות",
+    "rawMaterials": "חומרי גלם",
     "certificates": "תעודות",
     "finance": "כספים",
     "alerts": "התראות",
     "settings": "הגדרות",
-    "dealers": "דילרים",
-    "myAssignments": "הפרויקטים שלי"
+    "dealers": "סוכני כשרות",
+    "myAssignments": "הפרויקטים שלי",
+    "myHolograms": "הולוגרמות שלי",
+    "myProfile": "הפרופיל שלי"
   },
   "common": {
     "save": "שמור",

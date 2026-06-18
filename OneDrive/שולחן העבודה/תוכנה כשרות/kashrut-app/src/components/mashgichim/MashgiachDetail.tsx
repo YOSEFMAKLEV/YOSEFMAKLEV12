@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useState, useTransition } from "react";
+import { markMessageRead } from "@/actions/officeMessages";
+import { useRouter } from "next/navigation";
 
 type Level = { levelId: string; level: { name: string; color: string | null } };
 type CertBody = { certBodyId: string; certBody: { name: string } };
@@ -10,6 +13,13 @@ type Assignment = {
   scheduledEnd: Date | null;
   site: { id: string; name: string; country: string };
   project: { id: string; type: string; status: string };
+};
+type OfficeMsg = {
+  id: string;
+  body: string;
+  attachments: unknown;
+  status: string;
+  createdAt: Date;
 };
 
 type Mashgiach = {
@@ -57,8 +67,73 @@ function formatDate(d: Date) {
   return new Intl.DateTimeFormat("he-IL").format(new Date(d));
 }
 
-export function MashgiachDetail({ m }: { m: Mashgiach }) {
+function MessagesList({ messages }: { messages: OfficeMsg[] }) {
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+  const attachList = (msg: OfficeMsg) => (msg.attachments as string[] | null) ?? [];
+
+  function handleRead(id: string) {
+    startTransition(async () => {
+      await markMessageRead(id);
+      router.refresh();
+    });
+  }
+
+  if (messages.length === 0) {
+    return <p className="text-gray-400 text-sm text-center py-6">אין הודעות ממשגיח זה</p>;
+  }
+
+  return (
+    <div className="space-y-3">
+      {messages.map(msg => (
+        <div key={msg.id} className={`rounded-lg border p-4 ${msg.status === "UNREAD" ? "border-blue-200 bg-blue-50" : "border-gray-100 bg-white"}`}>
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <div className="flex items-center gap-2">
+              {msg.status === "UNREAD" && (
+                <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-0.5" />
+              )}
+              <p className="text-xs text-gray-400">
+                {new Intl.DateTimeFormat("he-IL", { dateStyle: "medium", timeStyle: "short" }).format(new Date(msg.createdAt))}
+              </p>
+            </div>
+            {msg.status === "UNREAD" && (
+              <button
+                onClick={() => handleRead(msg.id)}
+                className="text-xs text-blue-600 hover:text-blue-800 flex-shrink-0"
+              >
+                סמן כנקרא
+              </button>
+            )}
+          </div>
+          <p className="text-sm text-gray-800 whitespace-pre-wrap">{msg.body}</p>
+          {attachList(msg).length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {attachList(msg).map((path, i) => {
+                const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(path);
+                return isImg ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <a key={i} href={path} target="_blank" rel="noopener noreferrer">
+                    <img src={path} alt="" className="w-20 h-20 object-cover rounded-lg border border-gray-200 hover:opacity-80 transition-opacity" />
+                  </a>
+                ) : (
+                  <a key={i} href={path} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600 hover:bg-gray-100"
+                  >
+                    📎 {path.split("/").pop()}
+                  </a>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function MashgiachDetail({ m, messages = [] }: { m: Mashgiach; messages?: OfficeMsg[] }) {
   const langs = m.languages as Record<string, string> | null;
+  const unreadCount = messages.filter(msg => msg.status === "UNREAD").length;
 
   return (
     <div className="grid grid-cols-3 gap-6">
@@ -153,6 +228,17 @@ export function MashgiachDetail({ m }: { m: Mashgiach }) {
               {m.notes}
             </div>
           )}
+        </div>
+
+        {/* Messages from mashgiach */}
+        <div className="rounded-xl border bg-white p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <h2 className="font-semibold text-gray-900">הודעות מהמשגיח</h2>
+            {unreadCount > 0 && (
+              <span className="rounded-full bg-blue-600 text-white text-xs px-2 py-0.5 font-medium">{unreadCount}</span>
+            )}
+          </div>
+          <MessagesList messages={messages} />
         </div>
 
         {/* Assignments */}

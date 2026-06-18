@@ -1,22 +1,31 @@
 import Link from "next/link";
 import { getMashgichim } from "@/actions/mashgichim";
+import { MashgichimList } from "@/components/mashgichim/MashgichimList";
 
 const ORG_ID = "org_demo";
 
-const salaryLabels: Record<string, string> = {
-  HOURLY: "שעתי",
-  DAILY: "יומי",
-  MONTHLY: "חודשי",
-  COMBINED: "משולב",
-};
+export default async function MashgichimPage() {
+  const mashgichim = await getMashgichim(ORG_ID).catch(() => []);
 
-export default async function MashgichimPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string }>;
-}) {
-  const { q } = await searchParams;
-  const mashgichim = await getMashgichim(ORG_ID, q).catch(() => []);
+  const data = mashgichim.map((m) => ({
+    id: m.id,
+    name: m.name,
+    nameEn: m.nameEn,
+    phone: m.phone,
+    city: m.city,
+    isActive: m.isActive,
+    salaryModel: m.salaryModel,
+    salaryRate: m.salaryRate,
+    citizenships: m.citizenships,
+    activeRegions: m.activeRegions,
+    languages: (m.languages ?? {}) as Record<string, string>,
+    levels: m.levels.map((l) => ({
+      levelId: l.levelId,
+      name: l.level.name,
+      color: l.level.color,
+    })),
+    assignmentsCount: m._count.assignments,
+  }));
 
   return (
     <div>
@@ -29,79 +38,7 @@ export default async function MashgichimPage({
           + משגיח חדש
         </Link>
       </div>
-
-      <div className="mb-4">
-        <form>
-          <input
-            name="q"
-            defaultValue={q}
-            placeholder="חיפוש לפי שם, טלפון..."
-            className="w-full max-w-sm rounded-lg border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </form>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {mashgichim.length === 0 && (
-          <div className="col-span-3 rounded-xl border bg-white p-12 text-center text-gray-400">
-            אין משגיחים —{" "}
-            <Link href="/mashgichim/new" className="text-blue-600 hover:underline">
-              הוסף את הראשון
-            </Link>
-          </div>
-        )}
-        {mashgichim.map((m) => (
-          <Link
-            key={m.id}
-            href={`/mashgichim/${m.id}`}
-            className="rounded-xl border bg-white p-5 hover:shadow-md transition-shadow"
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="font-semibold text-gray-900">{m.name}</p>
-                {m.nameEn && <p className="text-xs text-gray-400">{m.nameEn}</p>}
-              </div>
-              <span
-                className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                  m.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
-                }`}
-              >
-                {m.isActive ? "פעיל" : "לא פעיל"}
-              </span>
-            </div>
-
-            <div className="mt-3 space-y-1.5 text-sm text-gray-600">
-              {m.phone && <p>📞 {m.phone}</p>}
-              {m.city && <p>📍 {m.city}</p>}
-              {m.salaryModel && (
-                <p>💰 {salaryLabels[m.salaryModel]}{m.salaryRate ? ` · ₪${m.salaryRate}` : ""}</p>
-              )}
-            </div>
-
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {m.citizenships.map((c) => (
-                <span key={c} className="rounded-full bg-blue-50 text-blue-600 px-2 py-0.5 text-xs">
-                  {c}
-                </span>
-              ))}
-            </div>
-
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {m.levels.map((l) => (
-                <span
-                  key={l.levelId}
-                  className="rounded-full px-2 py-0.5 text-xs font-medium"
-                  style={{ backgroundColor: l.level.color ? `${l.level.color}20` : "#f3f4f6", color: l.level.color ?? "#374151" }}
-                >
-                  {l.level.name}
-                </span>
-              ))}
-            </div>
-
-            <p className="mt-3 text-xs text-gray-400">{m._count.assignments} שיבוצים</p>
-          </Link>
-        ))}
-      </div>
+      <MashgichimList mashgichim={data} />
     </div>
   );
 }
